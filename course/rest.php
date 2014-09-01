@@ -114,9 +114,115 @@ switch($requestmethod) {
                         if (!course_allowed_module($course, $cm->modname)) {
                             throw new moodle_exception('No permission to create that activity');
                         }
+
                         $sr = optional_param('sr', null, PARAM_INT);
-                        $result = mod_duplicate_activity($course, $cm, $sr);
+
+                        $targetcourseid = optional_param('targetcourseId', $course->id, PARAM_INT);
+                        if ($targetcourseid !== $course->id) {
+                            // check rights
+                            $context = context_course::instance($targetcourseid);
+                            require_capability('moodle/course:manageactivities', $context);
+
+                            $targetcourse = $DB->get_record('course', array('id' => $targetcourseid), '*', MUST_EXIST);
+                        } else {
+                            $targetcourse = null;
+                        }
+
+                        $result = mod_duplicate_activity($course, $cm, $sr, $targetcourse);
                         echo json_encode($result);
+                        break;
+
+                    case 'duplicategettargetcourses':
+                        $content = array();
+                        $content['header'] = get_string('duplicate', 'moodle');
+                        $content['body'] = '';
+
+                        $url_params = array();
+                        $url_params['class'] = 'resource';
+                        $url_params['field'] = 'duplicate_get_target_sections';
+                        $url_params['id'] = $cm->id;
+                        $url_params['sr'] = optional_param('sr', null, PARAM_INT);
+                        $url_params['sesskey'] = sesskey();
+                        $url_params['courseId'] = $course->id;
+
+                        $mycourses = enrol_get_my_courses('id, fullname');
+
+                        foreach ($mycourses as $mycourse) {
+                            $context = context_course::instance($mycourse->id);
+                            if($context !== FALSE){
+                                if (has_capability('moodle/course:manageactivities', $context)) {
+                                    $url_params['targetcourseId'] = $mycourse->id;
+                                    $url = new moodle_url('/course/rest.php', $url_params);
+                                    $a_params = array();
+                                    $a_params['class'] = 'cm-edit-action';
+                                    $a_params['data-action'] = 'duplicate-set-target-sections';
+                                    $a_params['data-sr'] = $url_params['sr'];
+                                    $a_params['data-target'] = $mycourse->id;
+
+                                    if ($mycourse->id === $course->id) {
+                                        // this part skip "choose section" panel, if we duplicate in same course
+                                        // TODO: remove this part, and rewrite javascript to set duplicated activity in good section
+                                        $a_params['data-action'] = 'duplicate';
+                                        $a_params['data-source'] = $course->id;
+                                    }
+
+                                    $content['body'] .=  '<li class="activity" data-module="module-'.$url_params['id'].'">'.
+                                        html_writer::link('#'.$url, $mycourse->fullname, $a_params).'</li>';
+                                }
+                            }
+                        }
+
+                        $content['body'] = '<p>'.get_string('choosecourse', 'moodle').':</p><ul>'.$content['body'].'</ul>';
+                        echo json_encode($content);
+                        break;
+
+                    case 'duplicategettargetsections':
+                        $content = '';
+
+                        $url_params = array();
+                        $url_params['class'] = 'resource';
+                        $url_params['field'] = 'duplicate';
+                        $url_params['id'] = $cm->id;
+                        $url_params['sr'] = optional_param('sr', null, PARAM_INT);
+                        $url_params['sesskey'] = sesskey();
+                        $url_params['courseId'] = $course->id;
+                        $url_params['targetcourseId'] = optional_param('targetcourseId', $course->id, PARAM_INT);
+
+                        if($url_params['targetcourseId'] === $url_params['courseId']){
+                            $targetcourse = $course;
+                        }else{
+                            $targetcourse = $DB->get_record('course', array('id' => $url_params['targetcourseId']), '*', MUST_EXIST);
+                        }
+
+                        $course_modinfo = get_fast_modinfo($targetcourse->id, $USER->id, false);
+                        if ($course_modinfo === null) {
+                            throw new moodle_exception('No modinfo');
+                        }
+
+                        $sections = $course_modinfo->get_section_info_all();
+                        foreach ($sections as $section) {
+                            if ($section->name === NULL) {
+                                $section_name = get_string('section', 'moodle').' '.$section->section;
+                            } else {
+                                $section_name = $section->name;
+                            }
+
+                            $url = new moodle_url('/course/rest.php', $url_params);
+                            $a_params = array();
+                            $a_params['class'] = 'cm-edit-action';
+                            $a_params['data-action'] = 'duplicate';
+                            $a_params['data-sr'] = $section->section;
+                            $a_params['data-target'] = $targetcourse->id;
+                            $a_params['data-source'] = $course->id;
+
+                            $content .=  '<li class="activity" data-module="module-'.$url_params['id'].'">'.
+                                html_writer::link('#'.$url, $section_name, $a_params).'</li>';
+
+                        }
+
+                        $strduplicatetocourse = get_string('duplicateintocourse', 'moodle', $targetcourse->fullname);
+                        $strchoosesection = get_string('choosesection', 'moodle');
+                        echo json_encode('<p>'.$strduplicatetocourse.'</p><p>'.$strchoosesection.':</p><ul>'.$content.'</ul>');
                         break;
 
                     case 'groupmode':

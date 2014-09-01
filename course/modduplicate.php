@@ -34,13 +34,18 @@ require_once($CFG->libdir . '/filelib.php');
 
 $cmid           = required_param('cmid', PARAM_INT);
 $courseid       = required_param('course', PARAM_INT);
+$targetcourseid = required_param('targetcourse', PARAM_INT);
 $sectionreturn  = optional_param('sr', null, PARAM_INT);
-
-$course     = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+$course       = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+$targetcourse = $DB->get_record('course', array('id' => $targetcourseid), '*', MUST_EXIST);
 $cm         = get_coursemodule_from_id('', $cmid, $course->id, true, MUST_EXIST);
 $cmcontext  = context_module::instance($cm->id);
 $context    = context_course::instance($courseid);
 $section    = $DB->get_record('course_sections', array('id' => $cm->section, 'course' => $cm->course));
+
+if(optional_param('cancel', null, PARAM_ALPHA) !== null){
+    redirect($CFG->wwwroot.'/course/view.php?id='.$courseid);
+}
 
 require_login($course);
 require_sesskey();
@@ -78,9 +83,13 @@ $bc->execute_plan();
 $bc->destroy();
 
 // restore the backup immediately
-
-$rc = new restore_controller($backupid, $courseid,
-        backup::INTERACTIVE_NO, backup::MODE_IMPORT, $USER->id, backup::TARGET_CURRENT_ADDING);
+if($targetcourseid === $courseid){
+    $target = backup::TARGET_CURRENT_ADDING;
+}else{
+    $target = backup::TARGET_EXISTING_ADDING;
+}
+$rc = new restore_controller($backupid, $targetcourseid,
+        backup::INTERACTIVE_NO, backup::MODE_IMPORT, $USER->id, $target);
 
 if (!$rc->execute_precheck()) {
     $precheckresults = $rc->get_precheck_results();
@@ -117,9 +126,11 @@ foreach ($tasks as $task) {
 // right below the original one. otherwise it will stay at the
 // end of the section
 if ($newcmid) {
-    $newcm = get_coursemodule_from_id('', $newcmid, $course->id, true, MUST_EXIST);
-    moveto_module($newcm, $section, $cm);
-    moveto_module($cm, $section, $newcm);
+    $newcm = get_coursemodule_from_id('', $newcmid, $targetcourse->id, true, MUST_EXIST);
+    if($targetcourseid === $courseid){
+        moveto_module($newcm, $section, $cm);
+        moveto_module($cm, $section, $newcm);
+    }
 
     // Trigger course module created event. We can trigger the event only if we know the newcmid.
     $event = \core\event\course_module_created::create_from_cm($newcm);
@@ -135,18 +146,28 @@ if (empty($CFG->keeptempdirectoriesonbackup)) {
 echo $output->header();
 
 if ($newcmid) {
-    echo $output->confirm(
-        get_string('duplicatesuccess', 'core', $a),
-        new single_button(
-            new moodle_url('/course/modedit.php', array('update' => $newcmid, 'sr' => $sectionreturn)),
-            get_string('duplicatecontedit'),
-            'get'),
-        new single_button(
-            course_get_url($course, $cm->sectionnum, array('sr' => $sectionreturn)),
-            get_string('duplicatecontcourse'),
-            'get')
-    );
+    if($targetcourseid === $courseid){
+        echo $output->confirm(
+            get_string('duplicatesuccess', 'core', $a),
+            new single_button(
+                new moodle_url('/course/modedit.php', array('update' => $newcmid, 'sr' => $sectionreturn)),
+                get_string('duplicatecontedit'),
+                'get'),
+            new single_button(
+                course_get_url($course, $cm->sectionnum, array('sr' => $sectionreturn)),
+                get_string('duplicatecontcourse'),
+                'get')
+        );
+    }else{
+        $links = array(
+            html_writer::tag('li', $output->action_link(new moodle_url('/course/modedit.php', array('update' => $newcmid, 'sr' => $sectionreturn)), get_string('duplicatecontedit'))),
+            html_writer::tag('li', $output->action_link(course_get_url($course, $cm->sectionnum, array('sr' => $sectionreturn)), get_string('backto', '', $course->fullname), null)),
+            html_writer::tag('li', $output->action_link(course_get_url($targetcourse, $cm->sectionnum, array('sr' => $sectionreturn)), get_string('backto', '', $targetcourse->fullname)))
+        );
 
+        echo $output->notification(get_string('duplicatesuccess', 'core', $a), 'notifysuccess');
+        echo html_writer::tag('ul', implode("\n", $links));
+    }
 } else {
     echo $output->notification(get_string('duplicatesuccess', 'core', $a), 'notifysuccess');
     echo $output->continue_button(course_get_url($course, $cm->sectionnum, array('sr' => $sectionreturn)));

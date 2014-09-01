@@ -2064,7 +2064,7 @@ function course_get_cm_edit_actions(cm_info $mod, $indent = -1, $sr = null) {
             new moodle_url($baseurl, array('duplicate' => $mod->id)),
             new pix_icon('t/copy', $str->duplicate, 'moodle', array('class' => 'iconsmall', 'title' => '')),
             $str->duplicate,
-            array('class' => 'editing_duplicate', 'data-action' => 'duplicate', 'data-sr' => $sr)
+            array('class' => 'editing_duplicate', 'data-action' => 'duplicate-set-target-courses', 'data-sr' => $sr)
         );
     }
 
@@ -3422,13 +3422,15 @@ function update_module($moduleinfo) {
  *
  * @param object $course The course
  * @param object $cm The course module to duplicate
+ * @param int|null $sr Section return
+ * @param object|null $targetcoures Target course where duplicate
  * @throws moodle_exception if the plugin doesn't support duplication
  * @return Object containing:
  * - fullcontent: The HTML markup for the created CM
  * - cmid: The CMID of the newly created CM
  * - redirect: Whether to trigger a redirect following this change
  */
-function mod_duplicate_activity($course, $cm, $sr = null) {
+function mod_duplicate_activity($course, $cm, $sr = null, $targetcourse = null) {
     global $CFG, $USER, $PAGE, $DB;
 
     require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
@@ -3441,6 +3443,10 @@ function mod_duplicate_activity($course, $cm, $sr = null) {
 
     if (!plugin_supports('mod', $cm->modname, FEATURE_BACKUP_MOODLE2)) {
         throw new moodle_exception('duplicatenosupport', 'error');
+    }
+
+    if ($targetcourse === null) {
+        $targetcourse = $course;
     }
 
     // backup the activity
@@ -3456,8 +3462,13 @@ function mod_duplicate_activity($course, $cm, $sr = null) {
     $bc->destroy();
 
     // restore the backup immediately
+    if ($targetcourse->id === $course->id) {
+        $target = backup::TARGET_CURRENT_ADDING;
+    } else {
+        $target = backup::TARGET_EXISTING_ADDING;
+    }
 
-    $rc = new restore_controller($backupid, $course->id,
+    $rc = new restore_controller($backupid, $targetcourse->id,
             backup::INTERACTIVE_NO, backup::MODE_IMPORT, $USER->id, backup::TARGET_CURRENT_ADDING);
 
     $cmcontext = context_module::instance($cm->id);
@@ -3492,11 +3503,21 @@ function mod_duplicate_activity($course, $cm, $sr = null) {
     // right below the original one. otherwise it will stay at the
     // end of the section
     if ($newcmid) {
-        $info = get_fast_modinfo($course);
+        $info = get_fast_modinfo($targetcourse);
         $newcm = $info->get_cm($newcmid);
-        $section = $DB->get_record('course_sections', array('id' => $cm->section, 'course' => $cm->course));
-        moveto_module($newcm, $section, $cm);
-        moveto_module($cm, $section, $newcm);
+
+        if ($sr === null || $targetcourse->id === $course->id) {
+            $section = $DB->get_record('course_sections', array('id' => $cm->section, 'course' => $cm->course));
+        } else {
+            $section = $DB->get_record('course_sections', array('section' => $sr, 'course' => $targetcourse->id));
+        }
+
+        if ($targetcourse->id === $course->id) {
+            moveto_module($newcm, $section, $cm);
+            moveto_module($cm, $section, $newcm);
+        } else {
+            moveto_module($newcm, $section);
+        }
 
         // Trigger course module created event. We can trigger the event only if we know the newcmid.
         $event = \core\event\course_module_created::create_from_cm($newcm);
@@ -3517,8 +3538,10 @@ function mod_duplicate_activity($course, $cm, $sr = null) {
         $modulehtml = $courserenderer->course_section_cm($course, $completioninfo,
                 $newcm, null, array());
 
-        $resp->fullcontent = $courserenderer->course_section_cm_list_item($course, $completioninfo, $newcm, $sr);
-        $resp->cmid = $newcm->id;
+        if ($targetcourse->id === $course->id) {
+            $resp->fullcontent = $courserenderer->course_section_cm_list_item($course, $completioninfo, $newcm, $sr);
+            $resp->cmid = $newcm->id;
+        }
     } else {
         // Trigger a redirect
         $resp->redirect = true;

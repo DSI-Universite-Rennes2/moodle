@@ -99,18 +99,13 @@ if (!empty($add)) {
         $a->modid   = $cm->id;
 
         echo $OUTPUT->header();
-        echo $OUTPUT->confirm(
-            get_string('duplicateconfirm', 'core', $a),
-            new single_button(
-                new moodle_url('/course/modduplicate.php', array(
-                    'cmid' => $cm->id, 'course' => $course->id, 'sr' => $sectionreturn)),
-                get_string('continue'),
-                'post'),
-            new single_button(
-                course_get_url($course, $cm->sectionnum, array('sr' => $sectionreturn)),
-                get_string('cancel'),
-                'get')
-        );
+        echo $OUTPUT->box_start('noticebox');
+
+        require $CFG->dirroot.'/course/duplicate_form.php';
+        $duplicate_form = new duplicate_form($CFG->wwwroot.'/course/modduplicate.php', array('cmid' => $cm->id, 'course' => $course->id, 'newcourse' => $course->id, 'sr' => $sectionreturn));
+        echo $duplicate_form->display();
+
+        echo $OUTPUT->box_end();
         echo $OUTPUT->footer();
         die();
     }

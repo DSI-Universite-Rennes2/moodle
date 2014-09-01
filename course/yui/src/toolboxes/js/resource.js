@@ -126,6 +126,14 @@ Y.extend(RESOURCETOOLBOX, TOOLBOX, {
                 // The user is deleting the activity.
                 this.delete_with_confirmation(ev, node, activity, action);
                 break;
+            case 'duplicate-set-target-courses':
+                // The user is duplicating the activity. The user will select a target course.
+                this.duplicate_get_target_courses(ev, node, activity, action);
+                break;
+            case 'duplicate-set-target-sections':
+                // The user is duplicating the activity. The user will select a section in target course.
+                this.duplicate_get_target_sections(ev, node, activity, action);
+                break;
             case 'duplicate':
                 // The user is duplicating the activity.
                 this.duplicate(ev, node, activity, action);
@@ -301,6 +309,79 @@ Y.extend(RESOURCETOOLBOX, TOOLBOX, {
     },
 
     /**
+     * Duplicates the activity: show all user's courses
+     *
+     * @method duplicate_get_target_courses
+     * @protected
+     * @param {EventFacade} ev The event that was fired.
+     * @param {Node} button The button that triggered this action.
+     * @param {Node} activity The activity node that this action will be performed on.
+     * @chainable
+     */
+    duplicate_get_target_courses: function(ev, button, activity) {
+        // Prevent the default button action
+        ev.preventDefault();
+
+        // Get the element we're working on
+        var element = activity;
+
+        // Add the lightbox.
+        var section = activity.ancestor(M.course.format.get_section_selector(Y)),
+            lightbox = M.util.add_lightbox(Y, section).show();
+
+        var data = {
+            'class': 'resource',
+            'field': 'duplicate_get_target_courses',
+            'id': Y.Moodle.core_course.util.cm.getId(element),
+            'sr': button.getData('sr')
+        };
+
+        this.send_request(data, lightbox, function(response) {
+            duplicate_panel = new M.core.dialogue({
+                headerContent: response.header,
+                bodyContent: response.body,
+                modal: true,
+                visible: true,
+                render: true,
+            });
+        });
+    },
+
+    /**
+     * Duplicates the activity: show all target course's sections
+     *
+     * @method duplicate_get_target_sections
+     * @protected
+     * @param {EventFacade} ev The event that was fired.
+     * @param {Node} button The button that triggered this action.
+     * @param {Node} activity The activity node that this action will be performed on.
+     * @chainable
+     */
+    duplicate_get_target_sections: function(ev, button, activity) {
+        // Prevent the default button action
+        ev.preventDefault();
+
+        // Get the element we're working on
+        var element = Y.one('#'+activity.getData('module'));
+
+        var section = element.ancestor(M.course.format.get_section_selector(Y)),
+            lightbox = M.util.add_lightbox(Y, section).show();
+
+        var data = {
+            'class': 'resource',
+            'field': 'duplicate_get_target_sections',
+            'id': Y.Moodle.core_course.util.cm.getId(element),
+            'targetcourseId': button.getData('target'),
+            'sr': button.getData('sr')
+        };
+
+        this.send_request(data, lightbox, function(response) {
+            duplicate_panel.set('bodyContent', response);
+        });
+
+    },
+
+    /**
      * Duplicates the activity.
      *
      * @method duplicate
@@ -315,6 +396,7 @@ Y.extend(RESOURCETOOLBOX, TOOLBOX, {
         ev.preventDefault();
 
         // Get the element we're working on
+        activity = Y.one('#'+activity.getData('module'));
         var element = activity;
 
         // Add the lightbox.
@@ -326,19 +408,25 @@ Y.extend(RESOURCETOOLBOX, TOOLBOX, {
             'class': 'resource',
             'field': 'duplicate',
             'id': Y.Moodle.core_course.util.cm.getId(element),
+            'targetcourseId': button.getData('target'),
             'sr': button.getData('sr')
         };
-        this.send_request(data, lightbox, function(response) {
-            var newcm = Y.Node.create(response.fullcontent);
 
-            // Append to the section?
-            activity.insert(newcm, 'after');
-            Y.use('moodle-course-coursebase', function() {
-                M.course.coursebase.invoke_function('setup_for_resource', newcm);
-            });
-            if (M.core.actionmenu && M.core.actionmenu.newDOMNode) {
-                M.core.actionmenu.newDOMNode(newcm);
+        this.send_request(data, lightbox, function(response) {
+            if (button.getData('target') == button.getData('source')) {
+                var newcm = Y.Node.create(response.fullcontent);
+
+                // Append to the section?
+                activity.insert(newcm, 'after');
+                Y.use('moodle-course-coursebase', function() {
+                    M.course.coursebase.invoke_function('setup_for_resource', newcm);
+                });
+                if (M.core.actionmenu && M.core.actionmenu.newDOMNode) {
+                    M.core.actionmenu.newDOMNode(newcm);
+                }
             }
+
+            duplicate_panel.destroy();
         });
         return this;
     },
