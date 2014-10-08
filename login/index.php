@@ -69,6 +69,8 @@ if ($testsession) {
         $errormsg = get_string("cookiesnotenabled");
         $errorcode = 1;
     }
+} else if (isloggedin() && !isguestuser()) {
+    redirect(new moodle_url('/my'));
 }
 
 /// Check for timed out sessions
