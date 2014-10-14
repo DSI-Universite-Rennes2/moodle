@@ -894,7 +894,7 @@ x#fitem_id_availabilityconditionsjson input[type=text] {
 .userenrolment tr {vertical-align:top;}
 .userenrolment td {height:41px;padding:3px;}
 .userenrolment td > * {margin:3px;}
-.userenrolment .subfield {margin-right:5px;}
+.userenrolment .subfield {display:inline-block;margin-right:5px;}
 .userenrolment .col_userdetails .subfield_picture {float:left;}
 .userenrolment .col_lastseen {width:150px;}
 .userenrolment .col_role {width:262px;}

@@ -571,15 +571,23 @@ class course_enrolment_table extends html_table implements renderable {
             foreach ($this->fields as $field => $label) {
                 if (is_array($label)) {
                     $bits = array();
+                    $picture = '';
                     foreach (array_keys($label) as $subfield) {
                         if (array_key_exists($subfield, $user)) {
-                            $bits[] = html_writer::tag('div', $user[$subfield], array('class'=>'subfield subfield_'.$subfield));
+                            if ( $subfield === 'picture' ){
+                                $picture = html_writer::tag('div', $user[$subfield], array('class'=>'subfield subfield_'.$subfield));
+                            }else{
+                                $bits[] = html_writer::tag('div', $user[$subfield], array('class'=>'subfield_'.$subfield));
+                            }
                         }
                     }
-                    if (empty($bits)) {
-                        $bits[] = '&nbsp;';
+                    if (empty($bits) && empty($picture)) {
+                        $row->cells[] = new html_table_cell('$nbsp;');
+                    } elseif(empty($bits)) {
+                        $row->cells[] = new html_table_cell($picture);
+                    } else {
+                        $row->cells[] = new html_table_cell($picture.html_writer::tag('div', join(' ', $bits), array('class'=>'subfield')));
                     }
-                    $row->cells[] = new html_table_cell(join(' ', $bits));
                 } else {
                     if (!array_key_exists($field, $user)) {
                         $user[$field] = '&nbsp;';
