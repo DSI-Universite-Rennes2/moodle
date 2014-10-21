@@ -63,6 +63,17 @@ class quiz_overview_table extends quiz_attempts_report_table {
         }
 
         $this->strtimeformat = str_replace(',', ' ', get_string('strftimedatetime'));
+
+        if (!empty($this->options->showgroups)) {
+            foreach ($this->rawdata as $key => $value) {
+                $groups = array();
+                foreach (groups_get_all_groups($this->quiz->course, $value->userid) as $group) {
+                    $groups[] = $group->name;
+                }
+                $this->rawdata[$key]->group = implode(' - ', $groups);
+            }
+        }
+
         parent::build_table();
 
         // End of adding the data from attempts. Now add averages at bottom.

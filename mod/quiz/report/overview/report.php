@@ -198,6 +198,12 @@ class quiz_overview_report extends quiz_attempts_report {
             }
 
             $this->add_user_columns($table, $columns, $headers);
+
+            if (!empty($options->showgroups)) {
+                $columns[] = 'group';
+                $headers[] = get_string('group');
+            }
+
             $this->add_state_column($columns, $headers);
             $this->add_time_columns($columns, $headers);
 

@@ -102,6 +102,10 @@ abstract class mod_quiz_attempts_report_form extends moodleform {
     protected function standard_preference_fields(MoodleQuickForm $mform) {
         $mform->addElement('text', 'pagesize', get_string('pagesize', 'quiz'));
         $mform->setType('pagesize', PARAM_INT);
+        if (count(groups_get_all_groups($this->_customdata['quiz']->course)) > 0) {
+            $mform->addElement('advcheckbox', 'showgroups', get_string('showgroups', 'grades'));
+            $mform->setType('showgroups', PARAM_INT);
+        }
     }
 
     protected function other_preference_fields(MoodleQuickForm $mform) {

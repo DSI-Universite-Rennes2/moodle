@@ -42,10 +42,14 @@ class quiz_overview_options extends mod_quiz_attempts_report_options {
     /** @var bool whether to show marks for each question (slot). */
     public $slotmarks = true;
 
+    /** @var bool whether to show groups column. */
+    public $showgroups = true;
+
     protected function get_url_params() {
         $params = parent::get_url_params();
         $params['onlyregraded'] = $this->onlyregraded;
         $params['slotmarks']    = $this->slotmarks;
+        $params['showgroups']   = $this->showgroups;
         return $params;
     }
 
@@ -53,7 +57,7 @@ class quiz_overview_options extends mod_quiz_attempts_report_options {
         $toform = parent::get_initial_form_data();
         $toform->onlyregraded = $this->onlyregraded;
         $toform->slotmarks    = $this->slotmarks;
-
+        $toform->showgroups   = $this->showgroups;
         return $toform;
     }
 
@@ -62,6 +66,7 @@ class quiz_overview_options extends mod_quiz_attempts_report_options {
 
         $this->onlyregraded = !empty($fromform->onlyregraded);
         $this->slotmarks    = $fromform->slotmarks;
+        $this->showgroups   = !empty($fromform->showgroups);
     }
 
     public function setup_from_params() {
@@ -69,6 +74,7 @@ class quiz_overview_options extends mod_quiz_attempts_report_options {
 
         $this->onlyregraded = optional_param('onlyregraded', $this->onlyregraded, PARAM_BOOL);
         $this->slotmarks    = optional_param('slotmarks', $this->slotmarks, PARAM_BOOL);
+        $this->showgroups   = optional_param('showgroups', $this->showgroups, PARAM_BOOL);
     }
 
     public function setup_from_user_preferences() {
