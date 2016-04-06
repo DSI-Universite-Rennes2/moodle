@@ -1895,6 +1895,21 @@ class MoodleQuickForm extends HTML_QuickForm_DHTMLRulesTableless {
         $this->setDefaults(array($elementName=>$defaultValue));
     }
 
+     /**
+     * Add a datalist to element. Works only on text element.
+     *
+     * @param string $elementname
+     * @param array $datalist array for options in datalist tag.
+     */
+    function addDatalist($elementname, $datalist) {
+        $element =& $this->getElement($elementname);
+        if (method_exists($element, 'setDatalist')) {
+            $element->setDatalist($datalist);
+        } else {
+            debugging('Cannot use addDatalist on '.$elementname.' element', DEBUG_DEVELOPER);
+        }
+    }
+
     /**
      * Add a help button to element, only one button per element is allowed.
      *

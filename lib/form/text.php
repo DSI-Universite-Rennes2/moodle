@@ -38,6 +38,9 @@ require_once("HTML/QuickForm/text.php");
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class MoodleQuickForm_text extends HTML_QuickForm_text{
+    /** @var array to attach a datalist on text element */
+    public $_datalist = array();
+
     /** @var string html for help button, if empty then no help */
     var $_helpbutton='';
 
@@ -63,6 +66,15 @@ class MoodleQuickForm_text extends HTML_QuickForm_text{
     public function MoodleQuickForm_text($elementName=null, $elementLabel=null, $attributes=null) {
         debugging('Use of class name as constructor is deprecated', DEBUG_DEVELOPER);
         self::__construct($elementName, $elementLabel, $attributes);
+    }
+
+    /**
+     * Sets datalist
+     *
+     * @param array $datalist sets each datalist elements
+     */
+    function setDatalist($datalist){
+        $this->_datalist = $datalist;
     }
 
     /**
@@ -106,14 +118,37 @@ class MoodleQuickForm_text extends HTML_QuickForm_text{
      *
      * @return string
      */
-    function toHtml(){
-        if ($this->_hiddenLabel){
+    function toHtml() {
+        $datalist = '';
+
+        if ($this->_datalist) {
+            $datalistid = 'datalist_'.$this->getAttribute('id');
+
+            $this->updateAttributes(array('list' => $datalistid));
+
+            $datalist = '<datalist id="'.$datalistid.'">';
+            foreach ($this->_datalist as $option) {
+                $datalist .= '<option value="'.htmlspecialchars($option).'">';
+            }
+            $datalist .= '</datalist>';
+        }
+
+        if ($this->_hiddenLabel) {
             $this->_generateId();
             return '<label class="accesshide" for="'.$this->getAttribute('id').'" >'.
-                        $this->getLabel().'</label>'.parent::toHtml();
+                        $this->getLabel().'</label>'.parent::toHtml().$datalist;
         } else {
-             return parent::toHtml();
+             return parent::toHtml().$datalist;
         }
+    }
+
+    /**
+     * get array for datalist
+     *
+     * @return array for datalist
+     */
+    function getDatalist(){
+        return $this->_datalist;
     }
 
     /**
