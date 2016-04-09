@@ -29,6 +29,13 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configselect('forum_displaymode', get_string('displaymode', 'forum'),
                        get_string('configdisplaymode', 'forum'), FORUM_MODE_NESTED, forum_get_layout_modes()));
 
+    $roles = array();
+    foreach (role_fix_names(get_all_roles()) as $role) {
+        $roles[$role->id] = $role->localname;
+    }
+    $settings->add(new admin_setting_configmulticheckbox('forum_showroles', get_string('showroles', 'forum'),
+                       get_string('configshowroles', 'forum'), array(), $roles));
+
     $settings->add(new admin_setting_configcheckbox('forum_replytouser', get_string('replytouser', 'forum'),
                        get_string('configreplytouser', 'forum'), 1));
 

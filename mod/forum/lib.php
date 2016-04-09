@@ -3184,6 +3184,7 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
     $postuser->id = $post->userid;
     $postuser->fullname    = fullname($postuser, $cm->cache->caps['moodle/site:viewfullnames']);
     $postuser->profilelink = new moodle_url('/user/view.php', array('id'=>$post->userid, 'course'=>$course->id));
+    $postuser->roles = '';
 
     // Prepare the groups the posting user belongs to
     if (isset($cm->cache->usersgroups)) {
@@ -3195,6 +3196,30 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
         }
     } else {
         $groups = groups_get_all_groups($course->id, $post->userid, $cm->groupingid);
+    }
+
+    // Prepare to display posting user roles.
+    if (!empty($CFG->forum_showroles)) {
+        if (!isset($cm->cache->roles)) {
+            foreach (role_fix_names(get_all_roles(context_course::instance($course->id))) as $role) {
+                $cm->cache->roles[$role->id] = $role->localname;
+            }
+        }
+
+        if (!isset($cm->cache->usersroles[$post->userid])) {
+            $cm->cache->usersroles[$post->userid] = array();
+
+            $showroles = explode(',', $CFG->forum_showroles);
+            foreach (get_user_roles($modcontext, $post->userid) as $role) {
+                if (in_array($role->roleid, $showroles, true)) {
+                    $cm->cache->usersroles[$post->userid][] = $cm->cache->roles[$role->roleid];
+                }
+            }
+        }
+
+        if (isset($cm->cache->usersroles[$post->userid][0])) {
+            $postuser->roles = ' ('.implode(', ', $cm->cache->usersroles[$post->userid]).')';
+        }
     }
 
     // Prepare the attachements for the post, files then images
@@ -3339,6 +3364,7 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
 
     $by = new stdClass();
     $by->name = html_writer::link($postuser->profilelink, $postuser->fullname);
+    $by->roles = $postuser->roles;
     $by->date = userdate($post->modified);
     $output .= html_writer::tag('div', get_string('bynameondate', 'forum', $by), array('class'=>'author',
                                                                                        'role' => 'heading',
