@@ -199,6 +199,16 @@ abstract class quiz_attempts_report extends quiz_default_report {
     }
 
     /**
+     * Add the group column to the $columns and $headers arrays.
+     * @param array $columns the list of columns. Added to.
+     * @param array $headers the columns headings. Added to.
+     */
+    protected function add_group_column(&$columns, &$headers) {
+        $columns[] = 'group';
+        $headers[] = get_string('group');
+    }
+
+    /**
      * Add the state column to the $columns and $headers arrays.
      * @param array $columns the list of columns. Added to.
      * @param array $headers the columns headings. Added to.

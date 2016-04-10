@@ -300,6 +300,39 @@ class quiz_overview_table extends quiz_attempts_report_table {
         if ($this->options->slotmarks && has_capability('mod/quiz:regrade', $this->context)) {
             $this->regradedqs = $this->get_regraded_questions();
         }
+
+        if (groups_get_activity_groupmode($this->options->cm) && $this->is_downloading()) {
+            $this->set_users_groups();
+        }
+    }
+
+    /**
+     * Get all users groups.
+     * @return array A two dimensional array $userid => $groupid => $groupname.
+     */
+    protected function get_users_groups() {
+        global $DB;
+
+        $sql = "SELECT gm.userid, gm.groupid, g.name".
+            " FROM {groups_members} gm".
+            " JOIN {groups} g ON g.id = gm.groupid AND g.courseid = ?";
+        $params = array($this->quiz->course);
+
+        if ($this->options->cm->groupingid) {
+            $sql .= " JOIN {groupings_groups} gg ON g.id = gg.groupid AND gg.groupingid = ?";
+            $params[] = $this->options->cm->groupingid;
+        }
+
+        $usersgroups = array();
+        foreach ($DB->get_recordset_sql($sql, $params) as $groupmember) {
+            if (!isset($usersgroups[$groupmember->userid])) {
+                $usersgroups[$groupmember->userid] = array();
+            }
+
+            $usersgroups[$groupmember->userid][$groupmember->groupid] = $groupmember->name;
+        }
+
+        return $usersgroups;
     }
 
     /**
@@ -313,5 +346,21 @@ class quiz_overview_table extends quiz_attempts_report_table {
         $regradedqs = $DB->get_records_select('quiz_overview_regrades',
                 'questionusageid ' . $qubaids->usage_id_in(), $qubaids->usage_id_in_params());
         return quiz_report_index_by_keys($regradedqs, array('questionusageid', 'slot'));
+    }
+
+    /**
+     * Set group in rawdata.
+     * @return void.
+     */
+    protected function set_users_groups() {
+        $usersgroups = $this->get_users_groups();
+
+        foreach ($this->rawdata as $key => $rawdata) {
+            if (isset($usersgroups[$rawdata->userid])) {
+                $this->rawdata[$key]->group = implode(',', $usersgroups[$rawdata->userid]);
+            } else {
+                $this->rawdata[$key]->group = '';
+            }
+        }
     }
 }
