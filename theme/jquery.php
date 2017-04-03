@@ -130,10 +130,6 @@ header('Cache-Control: public, max-age='.$lifetime.', immutable');
 header('Accept-Ranges: none');
 header('Content-Type: '.$mimetype);
 
-if (xsendfile($file)) {
-    die;
-}
-
 if ($mimetype === 'text/css' or $mimetype === 'application/javascript') {
     if (!min_enable_zlib_compression()) {
         header('Content-Length: '.filesize($file));
@@ -141,6 +137,10 @@ if ($mimetype === 'text/css' or $mimetype === 'application/javascript') {
 } else {
     // No need to compress images.
     header('Content-Length: '.filesize($file));
+}
+
+if (xsendfile($file)) {
+    die;
 }
 
 readfile($file);
