@@ -236,10 +236,6 @@ function send_cached_image($imagepath, $etag) {
     header('Accept-Ranges: none');
     header('Content-Type: '.$mimetype);
 
-    if (xsendfile($imagepath)) {
-        die;
-    }
-
     if ($mimetype === 'image/svg+xml') {
         // SVG format is a text file. So we can compress SVG files.
         if (!min_enable_zlib_compression()) {
@@ -248,6 +244,10 @@ function send_cached_image($imagepath, $etag) {
     } else {
         // No need to compress other image formats.
         header('Content-Length: '.filesize($imagepath));
+    }
+
+    if (xsendfile($imagepath)) {
+        die;
     }
 
     readfile($imagepath);
