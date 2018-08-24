@@ -7947,6 +7947,41 @@ function moodle_major_version($fromdisk = false) {
 // MISCELLANEOUS.
 
 /**
+ * Checks availability of locale on current operating system.
+ *
+ * @category string
+ * @param string $langpackcode (e.g.: en, es, fr, de)
+ * @return bool true if the locale is available on OS.
+ */
+function moodle_check_locale_availability($langpackcode) {
+    global $CFG;
+
+    if (is_string($langpackcode) === false || empty($langpackcode) === true) {
+        throw new coding_exception('Invalid language pack code in moodle_check_locale_availability() call, only non-empty string is allowed');
+    }
+
+    // Fetch the correct locale based on ostype.
+    if ($CFG->ostype == 'WINDOWS') {
+        $stringtofetch = 'localewin';
+    } else {
+        $stringtofetch = 'locale';
+    }
+
+    // Store current locale.
+    $currentlocale = setlocale(LC_ALL, 0);
+    $locale = get_string_manager()->get_string($stringtofetch, 'langconfig', $a = null, $langpackcode);
+
+    // Try to set new locale.
+    $return = setlocale(LC_ALL, $locale);
+
+    // Restore current locale.
+    setlocale(LC_ALL, $currentlocale);
+
+    // If $return is not equal to false, it means that setlocale() succeed to change locale.
+    return $return !== false;
+}
+
+/**
  * Sets the system locale
  *
  * @category string

@@ -111,7 +111,12 @@ echo $OUTPUT->heading(get_string('langimport', 'tool_langimport'));
 $installedlangs = get_string_manager()->get_list_of_translations(true);
 
 $missingparents = array();
-foreach ($installedlangs as $installedlang => $unused) {
+foreach ($installedlangs as $installedlang => $langpackname) {
+    // Check locale availability.
+    if (moodle_check_locale_availability($installedlang) === false) {
+        $controller->errors[] = get_string('langunsupported', 'tool_langimport', $langpackname);
+    }
+
     $parent = get_parent_language($installedlang);
     if (empty($parent)) {
         continue;

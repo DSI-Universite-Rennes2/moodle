@@ -3911,6 +3911,22 @@ class core_moodlelib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test that moodle_check_locale_availability() works as expected.
+     *
+     */
+    public function test_moodle_check_locale_availability() {
+        // TODO: Test if locale is still the same before and after calling our function.
+
+        // Test what happen when locale is available on system.
+        $result = moodle_check_locale_availability('en');
+        $this->assertTrue($result);
+
+        // Test what happen when locale is not available on system.
+        $result = moodle_check_locale_availability('foobar');
+        $this->assertFalse($result);
+    }
+
+    /**
      * Test safe method unserialize_array().
      */
     public function test_unserialize_array() {
