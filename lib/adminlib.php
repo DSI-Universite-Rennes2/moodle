@@ -8210,6 +8210,72 @@ function admin_search_settings_html($query) {
 }
 
 /**
+ * Internal function - returns arrays of objects with uninitialised settings
+ *
+ * @param object $node Instance of admin_category or admin_settingpage
+ * @return array
+ */
+function admin_new_settings_by_page($node) {
+    $return = array();
+
+    if ($node instanceof admin_category) {
+        $entries = array_keys($node->children);
+        foreach ($entries as $entry) {
+            $return += admin_new_settings_by_page($node->children[$entry]);
+        }
+    } else if ($node instanceof admin_settingpage) {
+        $newsettings = array();
+        foreach ($node->settings as $setting) {
+            if (is_null($setting->get_setting())) {
+                $newsettings[] = $setting;
+            }
+        }
+
+        if (count($newsettings) > 0) {
+            $component = new stdClass();
+            $component->name = $node->visiblename; // E.g. Assignment settings, Forum.
+            $component->settings = $newsettings;
+
+            $return[$node->name] = $component;
+        }
+    }
+
+    return $return;
+}
+
+/**
+ * Internal function - print raw text with uninitialised settings
+ *
+ * @param object $node Instance of admin_category or admin_settingpage
+ * @return void
+ */
+function admin_print_new_settings_by_page($node) {
+    $newsettings = admin_new_settings_by_page($node);
+
+    if (isset($newsettings['frontpagesettings'])) {
+        $frontpage = $newsettings['frontpagesettings'];
+        unset($newsettings['frontpagesettings']);
+        array_unshift($newsettings, $frontpage);
+    }
+
+    mtrace('');
+    if (count($newsettings) === 0) {
+        mtrace(get_string('nonewsettings', 'admin'));
+        mtrace('');
+    } else {
+        foreach ($newsettings as $nodename => $node) {
+            mtrace('--> '.get_string('upgradesettings', 'admin').' - '.$node->name);
+            foreach ($node->settings as $setting) {
+                mtrace('++ '.$setting->visiblename.' ('.$setting->name.') ++');
+                mtrace($setting->description);
+                mtrace('  '.get_string('defaultsettinginfo', 'admin', $setting->get_defaultsetting()));
+            }
+            mtrace('');
+        }
+    }
+}
+
+/**
  * Internal function - returns arrays of html pages with uninitialised settings
  *
  * @param object $node Instance of admin_category or admin_settingpage
@@ -8217,42 +8283,33 @@ function admin_search_settings_html($query) {
  */
 function admin_output_new_settings_by_page($node) {
     global $OUTPUT;
+
     $return = array();
 
-    if ($node instanceof admin_category) {
-        $entries = array_keys($node->children);
-        foreach ($entries as $entry) {
-            $return += admin_output_new_settings_by_page($node->children[$entry]);
-        }
+    $nodes = admin_new_settings_by_page($node);
 
-    } else if ($node instanceof admin_settingpage) {
-            $newsettings = array();
-            foreach ($node->settings as $setting) {
-                if (is_null($setting->get_setting())) {
-                    $newsettings[] = $setting;
+    foreach ($nodes as $nodename => $node) {
+        $adminroot = admin_get_root();
+
+        $page = $OUTPUT->heading(get_string('upgradesettings', 'admin').' - '.$node->name, 2, 'main');
+        $page .= '<fieldset class="adminsettings">'."\n";
+        foreach ($node->settings as $setting) {
+            $fullname = $setting->get_full_name();
+            if (array_key_exists($fullname, $adminroot->errors)) {
+                $data = $adminroot->errors[$fullname]->data;
+            } else {
+                $data = $setting->get_setting();
+                if (is_null($data)) {
+                    $data = $setting->get_defaultsetting();
                 }
             }
-            if (count($newsettings) > 0) {
-                $adminroot = admin_get_root();
-                $page = $OUTPUT->heading(get_string('upgradesettings','admin').' - '.$node->visiblename, 2, 'main');
-                $page .= '<fieldset class="adminsettings">'."\n";
-                foreach ($newsettings as $setting) {
-                    $fullname = $setting->get_full_name();
-                    if (array_key_exists($fullname, $adminroot->errors)) {
-                        $data = $adminroot->errors[$fullname]->data;
-                    } else {
-                        $data = $setting->get_setting();
-                        if (is_null($data)) {
-                            $data = $setting->get_defaultsetting();
-                        }
-                    }
-                    $page .= '<div class="clearer"><!-- --></div>'."\n";
-                    $page .= $setting->output_html($data);
-                }
-                $page .= '</fieldset>';
-                $return[$node->name] = $page;
-            }
+
+            $page .= '<div class="clearer"><!-- --></div>'."\n";
+            $page .= $setting->output_html($data);
         }
+        $page .= '</fieldset>';
+        $return[$nodename] = $page;
+    }
 
     return $return;
 }

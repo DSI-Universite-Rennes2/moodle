@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -183,6 +182,10 @@ upgrade_noncore(true);
 
 // log in as admin - we need doanything permission when applying defaults
 \core\session\manager::set_user(get_admin());
+
+// Detects settings that were added during an upgrade, displays a screen for the admin.
+$adminroot = admin_get_root(); // Need all settings.
+admin_print_new_settings_by_page($adminroot);
 
 // apply all default settings, just in case do it twice to fill all defaults
 admin_apply_default_settings(NULL, false);
