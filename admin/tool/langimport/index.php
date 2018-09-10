@@ -28,8 +28,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\core_locale;
+
 require(__DIR__.'/../../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
+require_once($CFG->libdir.'/classes/locale.php');
 
 admin_externalpage_setup('toollangimport');
 
@@ -111,7 +114,12 @@ echo $OUTPUT->heading(get_string('langimport', 'tool_langimport'));
 $installedlangs = get_string_manager()->get_list_of_translations(true);
 
 $missingparents = array();
-foreach ($installedlangs as $installedlang => $unused) {
+foreach ($installedlangs as $installedlang => $langpackname) {
+    // Check locale availability.
+    if (core_locale::check_locale_availability($installedlang) === false) {
+        $controller->errors[] = get_string('langunsupported', 'tool_langimport', $langpackname);
+    }
+
     $parent = get_parent_language($installedlang);
     if (empty($parent)) {
         continue;
