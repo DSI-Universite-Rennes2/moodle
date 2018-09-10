@@ -166,6 +166,18 @@ function enrol_get_plugin($name) {
 }
 
 /**
+ * Returns number of roles for a user in a given context.
+ * @param int $contextid The context id of assignment instance.
+ * @param int $userid The user id to search roles.
+ * @return int Number of roles assigned to userid.
+ */
+function enrol_count_user_roles($contextid, $userid) {
+    global $DB;
+
+    return $DB->count_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
+}
+
+/**
  * Returns enrolment instances in given course.
  * @param int $courseid
  * @param bool $enabled

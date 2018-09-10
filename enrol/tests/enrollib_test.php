@@ -792,4 +792,42 @@ class core_enrollib_testcase extends advanced_testcase {
         // There are still only two distinct users.
         $this->assertEquals(2, count_enrolled_users($context));
     }
+
+    /**
+     * Test enrol_count_user_roles function.
+     *
+     * @return void
+     */
+    public function test_enrol_count_user_roles() {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+
+        $studentrole = $DB->get_record('role', array('shortname' => 'student'));
+        $this->assertNotEmpty($studentrole);
+        $teacherrole = $DB->get_record('role', array('shortname' => 'teacher'));
+        $this->assertNotEmpty($teacherrole);
+
+        $manual = enrol_get_plugin('manual');
+        $this->assertNotEmpty($manual);
+
+        // Test without enrolment.
+        $this->assertEquals(0, enrol_count_user_roles($context->id, $user->id));
+
+        // Test 1 enrolment.
+        $enrol = $DB->get_record('enrol', array('courseid' => $course->id, 'enrol' => 'manual'), '*', MUST_EXIST);
+        $manual->enrol_user($enrol, $user->id, $studentrole->id);
+
+        $this->assertEquals(1, enrol_count_user_roles($context->id, $user->id));
+
+        // Test 2 enrolments.
+        $enrol = $DB->get_record('enrol', array('courseid' => $course->id, 'enrol' => 'manual'), '*', MUST_EXIST);
+        $manual->enrol_user($enrol, $user->id, $teacherrole->id);
+
+        $this->assertEquals(2, enrol_count_user_roles($context->id, $user->id));
+    }
 }

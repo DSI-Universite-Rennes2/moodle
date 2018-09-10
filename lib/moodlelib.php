@@ -5406,7 +5406,13 @@ function reset_course_userdata($data) {
                     continue;
                 }
 
-                $plugin->unenrol_user($instance, $ue->userid);
+                if ($withroleid && enrol_count_user_roles($context->id, $ue->userid) > 1) {
+                    // If user has more than one role, just remove this role.
+                    role_unassign($withroleid, $ue->userid, $context->id);
+                } else {
+                    // If user has only one role, unenrol user from course.
+                    $plugin->unenrol_user($instance, $ue->userid);
+                }
                 $data->unenrolled[$ue->userid] = $ue->userid;
             }
             $rs->close();
