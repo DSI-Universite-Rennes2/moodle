@@ -1663,7 +1663,7 @@ function upgrade_language_pack($lang = null) {
     upgrade_started(false);
 
     require_once("$CFG->dirroot/$CFG->admin/tool/langimport/lib.php");
-    tool_langimport_preupgrade_update($lang);
+    \tool_langimport\tool_langimport_preupgrade_update($lang);
 
     get_string_manager()->reset_caches();
 

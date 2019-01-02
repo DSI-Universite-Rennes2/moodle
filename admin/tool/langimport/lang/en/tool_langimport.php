@@ -37,6 +37,7 @@ $string['langpackupdateskipped'] = 'Update of \'{$a}\' language pack skipped';
 $string['langpackuptodate'] = 'Language pack \'{$a}\' is up-to-date';
 $string['langpackupdated'] = 'Language pack \'{$a}\' was successfully updated';
 $string['langpackupdatedevent'] = 'Language pack updated';
+$string['langunsupported'] = 'Your server does not seem to fully support the <strong>{$a}</strong> language. Instead, the global locale will be used to format certain strings such as dates or numbers.';
 $string['langupdatecomplete'] = 'Language pack update completed';
 $string['missingcfglangotherroot'] = 'Missing configuration value $CFG->langotherroot';
 $string['missinglangparent'] = 'Missing parent language <em>{$a->parent}</em> of <em>{$a->lang}</em>.';
