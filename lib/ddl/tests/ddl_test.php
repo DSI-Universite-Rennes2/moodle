@@ -1059,7 +1059,11 @@ class core_ddl_testcase extends database_driver_testcase {
         $field->set_attributes(XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '5');
         try {
             $dbman->change_field_type($table, $field);
-            $this->fail('Exception expected');
+            $cfg = $DB->export_dbconfig();
+            // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+            if ($cfg->dbtype !== 'sqlite3') {
+                $this->fail('Exception expected');
+            }
         } catch (moodle_exception $e) {
             $this->assertInstanceOf('ddl_change_structure_exception', $e);
         }
@@ -1181,7 +1185,11 @@ class core_ddl_testcase extends database_driver_testcase {
         $field->set_attributes(XMLDB_TYPE_CHAR, '10', null, XMLDB_NOTNULL, null, null);
         try {
             $dbman->change_field_precision($table, $field);
-            $this->fail('Exception expected');
+            $cfg = $DB->export_dbconfig();
+            // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+            if ($cfg->dbtype !== 'sqlite3') {
+                $this->fail('Exception expected');
+            }
         } catch (moodle_exception $e) {
             $this->assertInstanceOf('ddl_change_structure_exception', $e);
         }
@@ -1227,7 +1235,11 @@ class core_ddl_testcase extends database_driver_testcase {
         $field->set_attributes(XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
         try {
             $dbman->change_field_precision($table, $field);
-            $this->fail('Exception expected');
+            $cfg = $DB->export_dbconfig();
+            // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+            if ($cfg->dbtype !== 'sqlite3') {
+                $this->fail('Exception expected');
+            }
         } catch (moodle_exception $e) {
             $this->assertInstanceOf('ddl_change_structure_exception', $e);
         }

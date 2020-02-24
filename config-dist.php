@@ -38,8 +38,8 @@ $CFG = new stdClass();
 // will be stored.  This database must already have been created         //
 // and a username/password created to access it.                         //
 
-$CFG->dbtype    = 'pgsql';      // 'pgsql', 'mariadb', 'mysqli', 'sqlsrv' or 'oci'
-$CFG->dblibrary = 'native';     // 'native' only at the moment
+$CFG->dbtype    = 'pgsql';      // 'pgsql', 'mariadb', 'mysqli', 'sqlsrv', 'oci' or 'sqlite3'
+$CFG->dblibrary = 'native';     // 'native' or 'pdo' (only for dbtype sqlite3)
 $CFG->dbhost    = 'localhost';  // eg 'localhost' or 'db.isp.com' or IP
 $CFG->dbname    = 'moodle';     // database name, eg moodle
 $CFG->dbuser    = 'username';   // your database username
@@ -79,6 +79,7 @@ $CFG->dboptions = array(
                                 // set to zero if you are using pg_bouncer in
                                 // 'transaction' mode (it is fine in 'session'
                                 // mode).
+    'file' => '',               // Only for dbtype sqlite3.
 );
 
 

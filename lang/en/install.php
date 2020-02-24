@@ -60,6 +60,7 @@ $string['configurationcompletesub'] = 'Moodle made an attempt to save your confi
 $string['database'] = 'Database';
 $string['databasehead'] = 'Database settings';
 $string['databasehost'] = 'Database host';
+$string['databasepath'] = 'Database path';
 $string['databasename'] = 'Database name';
 $string['databasepass'] = 'Database password';
 $string['databaseport'] = 'Database port';
@@ -212,6 +213,8 @@ $string['pathssubwwwroot'] = '<p>The full address where Moodle will be accessed 
 <p>If the current address is not correct, please change the URL in your browser\'s address bar and restart the installation.</p>';
 $string['pathsunsecuredataroot'] = 'Dataroot location is not secure';
 $string['pathswrongadmindir'] = 'Admin directory does not exist';
+$string['pdosqlite3'] = 'SQLite3 (pdo/sqlite3)';
+$string['pdosqlite3help'] = '<p>SQLite is a serverless SQL database implementation. Moodle has experimental support for it.</p><p><strong>It is <u>not recommended for production</u> Moodle sites.</strong></p>';
 $string['pgsqlextensionisnotpresentinphp'] = 'PHP has not been properly configured with the PGSQL extension so that it can communicate with PostgreSQL.  Please check your php.ini file or recompile PHP.';
 $string['phpextension'] = '{$a} PHP extension';
 $string['phpversion'] = 'PHP version';

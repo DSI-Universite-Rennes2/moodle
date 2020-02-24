@@ -135,6 +135,7 @@ if (!empty($_POST)) {
     $config->admin    = empty($_POST['admin']) ? 'admin' : trim($_POST['admin']);
 
     $config->dataroot = trim($_POST['dataroot']);
+    $config->dbpath   = $config->dataroot.'/moodle.sqlite3';
 
 } else {
     $config->stage    = INSTALL_WELCOME;
@@ -151,6 +152,15 @@ if (!empty($_POST)) {
     $config->admin    = 'admin';
 
     $config->dataroot = empty($distro->dataroot) ? null  : $distro->dataroot; // initialised later after including libs or by distro
+    $config->dbpath   = empty($distro->dbpath) ? null : $distro->dbpath; // Let distros set dbpath.
+}
+
+switch($config->dbtype) {
+    case 'sqlite3':
+        $config->dblibrary = 'pdo';
+        break;
+    default:
+        $config->dblibrary = 'native';
 }
 
 // Fake some settings so that we can use selected functions from moodlelib.php, weblib.php and filelib.php.
@@ -277,14 +287,22 @@ if ($config->stage > INSTALL_SAVE) {
 if ($config->stage == INSTALL_SAVE) {
     $CFG->early_install_lang = false;
 
-    $database = moodle_database::get_driver_instance($config->dbtype, 'native');
+    $database = moodle_database::get_driver_instance($config->dbtype, $config->dblibrary);
     if (!$database->driver_installed()) {
         $config->stage = INSTALL_DATABASETYPE;
     } else {
-        if (function_exists('distro_pre_create_db')) { // Hook for distros needing to do something before DB creation
-            $distro = distro_pre_create_db($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket), $distro);
+        switch ($config->dbtype) {
+            case 'sqlite3':
+                $dboptions = array('file' => $config->dbpath);
+                break;
+            default:
+                $dboptions = array('dbpersist' => 0, 'dbport' => $config->dbport, 'dbsocket' => $config->dbsocket);
         }
-        $hint_database = install_db_validate($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, array('dbpersist'=>0, 'dbport'=>$config->dbport, 'dbsocket'=>$config->dbsocket));
+
+        if (function_exists('distro_pre_create_db')) { // Hook for distros needing to do something before DB creation
+            $distro = distro_pre_create_db($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, $dboptions, $distro);
+        }
+        $hint_database = install_db_validate($database, $config->dbhost, $config->dbuser, $config->dbpass, $config->dbname, $config->prefix, $dboptions);
 
         if ($hint_database === '') {
             $configphp = install_generate_configphp($database, $CFG);
@@ -413,66 +431,86 @@ if ($config->stage == INSTALL_DOWNLOADLANG) {
 if ($config->stage == INSTALL_DATABASE) {
     $CFG->early_install_lang = false;
 
-    $database = moodle_database::get_driver_instance($config->dbtype, 'native');
+    $database = moodle_database::get_driver_instance($config->dbtype, $config->dblibrary);
 
     $sub = '<h3>'.$database->get_name().'</h3>'.$database->get_configuration_help();
 
     install_print_header($config, get_string('database', 'install'), get_string('databasehead', 'install'), $sub);
 
-    $strdbhost   = get_string('databasehost', 'install');
-    $strdbname   = get_string('databasename', 'install');
-    $strdbuser   = get_string('databaseuser', 'install');
-    $strdbpass   = get_string('databasepass', 'install');
-    $strprefix   = get_string('dbprefix', 'install');
-    $strdbport   = get_string('databaseport', 'install');
-    $strdbsocket = get_string('databasesocket', 'install');
-
     echo '<div class="row mb-4">';
 
-    $disabled = empty($distro->dbhost) ? '' : 'disabled="disabled';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbhost">'.$strdbhost.'</label></div>';
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_dbhost" name="dbhost" '.$disabled.' type="text" class="form-control text-ltr" value="'.s($config->dbhost).'" size="50" /></div>';
-    echo '</div>';
+    switch ($config->dbtype) {
+        case 'sqlite3':
+            $strdbpath   = get_string('databasepath', 'install');
+            $strprefix   = get_string('dbprefix', 'install');
 
-    echo '<div class="row mb-4">';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbname">'.$strdbname.'</label></div>';
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_dbname" name="dbname" type="text" class="form-control text-ltr" value="'.s($config->dbname).'" size="50" /></div>';
-    echo '</div>';
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbpath">'.$strdbpath.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbpath" name="dbpath" type="text" class="form-control text-ltr" value="'.s($config->dbpath).'" size="50" disabled="disabled" /></div>';
+            echo '</div>';
 
-    $disabled = empty($distro->dbuser) ? '' : 'disabled="disabled';
-    echo '<div class="row mb-4">';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbuser">'.$strdbuser.'</label></div>';
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_dbuser" name="dbuser" '.$disabled.' type="text" class="form-control text-ltr" value="'.s($config->dbuser).'" size="50" /></div>';
-    echo '</div>';
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_prefix">'.$strprefix.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_prefix" name="prefix" type="text" class="form-control text-ltr" value="'.s($config->prefix).'" size="10" /></div>';
+            echo '</div>';
 
-    echo '<div class="row mb-4">';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbpass">'.$strdbpass.'</label></div>';
-    // no password field here, the password may be visible in config.php if we can not write it to disk
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_dbpass" name="dbpass" type="text" class="form-control text-ltr" value="'.s($config->dbpass).'" size="50" /></div>';
-    echo '</div>';
+            break;
+        default:
+            $strdbhost   = get_string('databasehost', 'install');
+            $strdbname   = get_string('databasename', 'install');
+            $strdbuser   = get_string('databaseuser', 'install');
+            $strdbpass   = get_string('databasepass', 'install');
+            $strprefix   = get_string('dbprefix', 'install');
+            $strdbport   = get_string('databaseport', 'install');
+            $strdbsocket = get_string('databasesocket', 'install');
 
-    echo '<div class="row mb-4">';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_prefix">'.$strprefix.'</label></div>';
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_prefix" name="prefix" type="text" class="form-control text-ltr" value="'.s($config->prefix).'" size="10" /></div>';
-    echo '</div>';
+            $disabled = empty($distro->dbhost) ? '' : 'disabled="disabled';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbhost">'.$strdbhost.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbhost" name="dbhost" '.$disabled.' type="text" class="form-control text-ltr" value="'.s($config->dbhost).'" size="50" /></div>';
+            echo '</div>';
 
-    echo '<div class="row mb-4">';
-    echo '<div class="col-md-3 text-md-right pt-1"><label for="id_prefix">'.$strdbport.'</label></div>';
-    echo '<div class="col-md-9" data-fieldtype="text">';
-    echo '<input id="id_dbport" name="dbport" type="text" class="form-control text-ltr" value="'.s($config->dbport).'" size="10" /></div>';
-    echo '</div>';
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbname">'.$strdbname.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbname" name="dbname" type="text" class="form-control text-ltr" value="'.s($config->dbname).'" size="50" /></div>';
+            echo '</div>';
 
-    if (!(stristr(PHP_OS, 'win') && !stristr(PHP_OS, 'darwin'))) {
-        echo '<div class="row mb-4">';
-        echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbsocket">'.$strdbsocket.'</label></div>';
-        echo '<div class="col-md-9" data-fieldtype="text">';
-        echo '<input id="id_dbsocket" name="dbsocket" type="text" class="form-control text-ltr" value="'.s($config->dbsocket).'" size="50" /></div>';
-        echo '</div>';
+            $disabled = empty($distro->dbuser) ? '' : 'disabled="disabled';
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbuser">'.$strdbuser.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbuser" name="dbuser" '.$disabled.' type="text" class="form-control text-ltr" value="'.s($config->dbuser).'" size="50" /></div>';
+            echo '</div>';
+
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbpass">'.$strdbpass.'</label></div>';
+            // no password field here, the password may be visible in config.php if we can not write it to disk
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbpass" name="dbpass" type="text" class="form-control text-ltr" value="'.s($config->dbpass).'" size="50" /></div>';
+            echo '</div>';
+
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_prefix">'.$strprefix.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_prefix" name="prefix" type="text" class="form-control text-ltr" value="'.s($config->prefix).'" size="10" /></div>';
+            echo '</div>';
+
+            echo '<div class="row mb-4">';
+            echo '<div class="col-md-3 text-md-right pt-1"><label for="id_prefix">'.$strdbport.'</label></div>';
+            echo '<div class="col-md-9" data-fieldtype="text">';
+            echo '<input id="id_dbport" name="dbport" type="text" class="form-control text-ltr" value="'.s($config->dbport).'" size="10" /></div>';
+            echo '</div>';
+
+            if (!(stristr(PHP_OS, 'win') && !stristr(PHP_OS, 'darwin'))) {
+                echo '<div class="row mb-4">';
+                echo '<div class="col-md-3 text-md-right pt-1"><label for="id_dbsocket">'.$strdbsocket.'</label></div>';
+                echo '<div class="col-md-9" data-fieldtype="text">';
+                echo '<input id="id_dbsocket" name="dbsocket" type="text" class="form-control text-ltr" value="'.s($config->dbsocket).'" size="50" /></div>';
+                echo '</div>';
+            }
     }
 
     if ($hint_database !== '') {
@@ -492,11 +530,12 @@ if ($config->stage == INSTALL_DATABASETYPE) {
                                   get_string('databasetypehead', 'install'),
                                   get_string('databasetypesub', 'install'));
 
-    $databases = array('mysqli' => moodle_database::get_driver_instance('mysqli', 'native'),
-                       'mariadb'=> moodle_database::get_driver_instance('mariadb', 'native'),
-                       'pgsql'  => moodle_database::get_driver_instance('pgsql',  'native'),
-                       'oci'    => moodle_database::get_driver_instance('oci',    'native'),
-                       'sqlsrv' => moodle_database::get_driver_instance('sqlsrv', 'native'), // MS SQL*Server PHP driver
+    $databases = array('mysqli'  => moodle_database::get_driver_instance('mysqli', 'native'),
+                       'mariadb' => moodle_database::get_driver_instance('mariadb', 'native'),
+                       'pgsql'   => moodle_database::get_driver_instance('pgsql',  'native'),
+                       'oci'     => moodle_database::get_driver_instance('oci',    'native'),
+                       'sqlsrv'  => moodle_database::get_driver_instance('sqlsrv', 'native'), // MS SQL*Server PHP driver
+                       'sqlite3' => moodle_database::get_driver_instance('sqlite3', 'pdo'),
                       );
 
     echo '<div class="row mb-4">';
@@ -651,4 +690,3 @@ echo '</div>';
 
 install_print_footer($config);
 die;
-

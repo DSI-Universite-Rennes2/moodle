@@ -1070,7 +1070,11 @@ function environment_check_database($version, $env_select) {
     $result->setLevel($level);
     $result->setCurrentVersion($current_version);
     $result->setNeededVersion($needed_version);
-    $result->setInfo($current_vendor . ' (' . $dbinfo['description'] . ')');
+    if (isset($dbinfo['description'])) {
+        $result->setInfo($current_vendor . ' (' . $dbinfo['description'] . ')');
+    } else {
+        $result->setInfo($current_vendor);
+    }
 
 /// Do any actions defined in the XML file.
     process_environment_result($vendorsxml[$current_vendor], $result);

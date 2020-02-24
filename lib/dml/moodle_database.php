@@ -2070,6 +2070,14 @@ abstract class moodle_database {
     }
 
     /**
+     * Returns true if this database driver supports bitwise XOR operation.
+     * @return bool True if supported.
+     */
+    public function sql_bitxor_supported() {
+        return true;
+    }
+
+    /**
      * Returns the SQL text to be used in order to perform module '%'
      * operation - remainder after division
      *

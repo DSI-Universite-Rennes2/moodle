@@ -2994,6 +2994,7 @@
       <VENDOR name="postgres" version="9.5" />
       <VENDOR name="mssql" version="11.0" />
       <VENDOR name="oracle" version="11.2" />
+      <VENDOR name="sqlite" version="3.0.0" />
     </DATABASE>
     <PHP version="7.2.0" level="required">
     </PHP>

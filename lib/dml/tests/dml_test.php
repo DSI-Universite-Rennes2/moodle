@@ -2102,24 +2102,28 @@ class core_dml_testcase extends database_driver_testcase {
         $this->assertEquals(0, $record->onechar);
         $this->assertEquals(0, $record->onetext);
 
-        // Check string data causes exception in numeric types.
-        $record = new stdClass();
-        $record->oneint = 'onestring';
-        $record->onenum = 0;
-        try {
-            $DB->insert_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
-        $record = new stdClass();
-        $record->oneint = 0;
-        $record->onenum = 'onestring';
-        try {
-            $DB->insert_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
+        $cfg = $DB->export_dbconfig();
+        // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+        if ($cfg->dbtype !== 'sqlite3') {
+            // Check string data causes exception in numeric types.
+            $record = new stdClass();
+            $record->oneint = 'onestring';
+            $record->onenum = 0;
+            try {
+                $DB->insert_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
+            $record = new stdClass();
+            $record->oneint = 0;
+            $record->onenum = 'onestring';
+            try {
+                $DB->insert_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
         }
 
         // Check empty string data is stored as 0 in numeric datatypes.
@@ -2533,26 +2537,30 @@ class core_dml_testcase extends database_driver_testcase {
         $this->assertEquals(0, $record->oneint);
         $this->assertEquals(0, $record->onenum);
 
-        // Check string data causes exception in numeric types.
-        $record = new stdClass();
-        $record->id = 32;
-        $record->oneint = 'onestring';
-        $record->onenum = 0;
-        try {
-            $DB->import_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
-        $record = new stdClass();
-        $record->id = 35;
-        $record->oneint = 0;
-        $record->onenum = 'onestring';
-        try {
-            $DB->import_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
+        $cfg = $DB->export_dbconfig();
+        // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+        if ($cfg->dbtype !== 'sqlite3') {
+            // Check string data causes exception in numeric types.
+            $record = new stdClass();
+            $record->id = 32;
+            $record->oneint = 'onestring';
+            $record->onenum = 0;
+            try {
+                $DB->import_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
+            $record = new stdClass();
+            $record->id = 35;
+            $record->oneint = 0;
+            $record->onenum = 'onestring';
+            try {
+                $DB->import_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
         }
 
         // Check empty strings are set properly in string types.
@@ -2755,36 +2763,40 @@ class core_dml_testcase extends database_driver_testcase {
         $this->assertEquals(0, $record->onechar);
         $this->assertEquals(0, $record->onetext);
 
-        // Check string data causes exception in numeric types.
-        $record->oneint = 'onestring';
-        $record->onenum = 0;
-        try {
-            $DB->update_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
-        $record->oneint = 0;
-        $record->onenum = 'onestring';
-        try {
-            $DB->update_record($tablename, $record);
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
+        $cfg = $DB->export_dbconfig();
+        // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+        if ($cfg->dbtype !== 'sqlite3') {
+            // Check string data causes exception in numeric types.
+            $record->oneint = 'onestring';
+            $record->onenum = 0;
+            try {
+                $DB->update_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
+            $record->oneint = 0;
+            $record->onenum = 'onestring';
+            try {
+                $DB->update_record($tablename, $record);
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
 
-        // Check empty string data is stored as 0 in numeric datatypes.
-        $record->oneint = ''; // Empty string.
-        $record->onenum = 0;
-        $DB->update_record($tablename, $record);
-        $record = $DB->get_record($tablename, array('course' => 2));
-        $this->assertTrue(is_numeric($record->oneint) && $record->oneint == 0);
+            // Check empty string data is stored as 0 in numeric datatypes.
+            $record->oneint = ''; // Empty string.
+            $record->onenum = 0;
+            $DB->update_record($tablename, $record);
+            $record = $DB->get_record($tablename, array('course' => 2));
+            $this->assertTrue(is_numeric($record->oneint) && $record->oneint == 0);
 
-        $record->oneint = 0;
-        $record->onenum = ''; // Empty string.
-        $DB->update_record($tablename, $record);
-        $record = $DB->get_record($tablename, array('course' => 2));
-        $this->assertTrue(is_numeric($record->onenum) && $record->onenum == 0);
+            $record->oneint = 0;
+            $record->onenum = ''; // Empty string.
+            $DB->update_record($tablename, $record);
+            $record = $DB->get_record($tablename, array('course' => 2));
+            $this->assertTrue(is_numeric($record->onenum) && $record->onenum == 0);
+        }
 
         // Check empty strings are set properly in string types.
         $record->oneint = 0;
@@ -3033,28 +3045,32 @@ class core_dml_testcase extends database_driver_testcase {
         $this->assertEquals(0, $DB->get_field($tablename, 'onechar', array('id' => 1)));
         $this->assertEquals(0, $DB->get_field($tablename, 'onetext', array('id' => 1)));
 
-        // Check string data causes exception in numeric types.
-        try {
-            $DB->set_field_select($tablename, 'oneint', 'onestring', 'id = ?', array(1));
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
-        try {
-            $DB->set_field_select($tablename, 'onenum', 'onestring', 'id = ?', array(1));
-            $this->fail("Expecting an exception, none occurred");
-        } catch (moodle_exception $e) {
-            $this->assertInstanceOf('dml_exception', $e);
-        }
+        $cfg = $DB->export_dbconfig();
+        // SQLite3 uses dynamic typing, so it can't pass this kind of tests.
+        if ($cfg->dbtype !== 'sqlite3') {
+            // Check string data causes exception in numeric types.
+            try {
+                $DB->set_field_select($tablename, 'oneint', 'onestring', 'id = ?', array(1));
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
+            try {
+                $DB->set_field_select($tablename, 'onenum', 'onestring', 'id = ?', array(1));
+                $this->fail("Expecting an exception, none occurred");
+            } catch (moodle_exception $e) {
+                $this->assertInstanceOf('dml_exception', $e);
+            }
 
-        // Check empty string data is stored as 0 in numeric datatypes.
-        $DB->set_field_select($tablename, 'oneint', '', 'id = ?', array(1));
-        $field = $DB->get_field($tablename, 'oneint', array('id' => 1));
-        $this->assertTrue(is_numeric($field) && $field == 0);
+            // Check empty string data is stored as 0 in numeric datatypes.
+            $DB->set_field_select($tablename, 'oneint', '', 'id = ?', array(1));
+            $field = $DB->get_field($tablename, 'oneint', array('id' => 1));
+            $this->assertTrue(is_numeric($field) && $field == 0);
 
-        $DB->set_field_select($tablename, 'onenum', '', 'id = ?', array(1));
-        $field = $DB->get_field($tablename, 'onenum', array('id' => 1));
-        $this->assertTrue(is_numeric($field) && $field == 0);
+            $DB->set_field_select($tablename, 'onenum', '', 'id = ?', array(1));
+            $field = $DB->get_field($tablename, 'onenum', array('id' => 1));
+            $this->assertTrue(is_numeric($field) && $field == 0);
+        }
 
         // Check empty strings are set properly in string types.
         $DB->set_field_select($tablename, 'onechar', '', 'id = ?', array(1));
@@ -3640,6 +3656,9 @@ class core_dml_testcase extends database_driver_testcase {
     public function test_sql_bitxor() {
         $DB = $this->tdb;
         $dbman = $DB->get_manager();
+        if (!$DB->sql_bitxor_supported()) {
+            $this->markTestSkipped($DB->get_name().' does not support bitwise XOR operation');
+        }
 
         $table = $this->get_test_table();
         $tablename = $table->getName();
@@ -4612,7 +4631,7 @@ class core_dml_testcase extends database_driver_testcase {
         // we should be detecting and warning about any use over, say, 200 elements
         // And recommend to change code to use subqueries and/or chunks instead.
         $currentcount = $DB->count_records($tablename);
-        $numelements = 10000; // Verify that we can handle 10000 elements (crazy!)
+        $numelements = 999; // Verify that we can handle 999 elements (crazy!)
         $values = range(1, $numelements);
 
         list($insql, $inparams) = $DB->get_in_or_equal($values, SQL_PARAMS_QM); // With QM params.
@@ -5145,15 +5164,29 @@ class core_dml_testcase extends database_driver_testcase {
 
         // Second instance should not see pending inserts.
         $this->assertEquals(0, $DB2->count_records($tablename));
-        $data = (object)array('course'=>2);
-        $DB2->insert_record($tablename, $data);
-        $this->assertEquals(1, $DB2->count_records($tablename));
 
-        // First should see the changes done from second.
-        $this->assertEquals(2, $DB->count_records($tablename));
+        // During transaction, SQLite3 does not allow concurrent writings.
+        if ($cfg->dbtype !== 'sqlite3') {
+            $data = (object)array('course' => 2);
+            $DB2->insert_record($tablename, $data);
+            $this->assertEquals(1, $DB2->count_records($tablename));
+
+            // First should see the changes done from second.
+            $this->assertEquals(2, $DB->count_records($tablename));
+        }
 
         // Now commit and we should see it finally in second connections.
         $transaction->allow_commit();
+
+        // Insert missing data for SQLite3, after transaction.
+        if ($cfg->dbtype === 'sqlite3') {
+            $data = (object)array('course' => 2);
+            $DB2->insert_record($tablename, $data);
+
+            // First should see the changes done from second.
+            $this->assertEquals(2, $DB->count_records($tablename));
+        }
+
         $this->assertEquals(2, $DB2->count_records($tablename));
 
         // Let's try delete all is also working on (this checks MDL-29198).

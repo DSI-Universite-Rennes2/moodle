@@ -71,13 +71,6 @@ class sqlite_sql_generator extends sql_generator {
     public $rename_key_sql = null;
 
     /**
-     * Creates one new XMLDBmysql
-     */
-    public function __construct($mdb) {
-        parent::__construct($mdb);
-    }
-
-    /**
      * Reset a sequence to the id field of a table.
      *
      * @param xmldb_table|string $table name of table or the table object.
@@ -153,7 +146,7 @@ class sqlite_sql_generator extends sql_generator {
                 $dbtype = $this->number_type;
                 if (!empty($xmldb_length)) {
                     $dbtype .= '(' . $xmldb_length;
-                    if (!empty($xmldb_decimals)) {
+                    if ($xmldb_decimals !== null) {
                         $dbtype .= ',' . $xmldb_decimals;
                     }
                     $dbtype .= ')';
@@ -163,7 +156,7 @@ class sqlite_sql_generator extends sql_generator {
                 $dbtype = 'REAL';
                 if (!empty($xmldb_length)) {
                     $dbtype .= '(' . $xmldb_length;
-                    if (!empty($xmldb_decimals)) {
+                    if ($xmldb_decimals !== null) {
                         $dbtype .= ',' . $xmldb_decimals;
                     }
                     $dbtype .= ')';
@@ -191,87 +184,38 @@ class sqlite_sql_generator extends sql_generator {
 
     /**
      * Function to emulate full ALTER TABLE which SQLite does not support.
-     * The function can be used to drop a column ($xmldb_delete_field != null and
-     * $xmldb_add_field == null), add a column ($xmldb_delete_field == null and
-     * $xmldb_add_field != null), change/rename a column ($xmldb_delete_field == null
-     * and $xmldb_add_field == null).
-     * @param xmldb_table $xmldb_table table to change
-     * @param xmldb_field $xmldb_add_field column to create/modify (full specification is required)
-     * @param xmldb_field $xmldb_delete_field column to delete/modify (only name field is required)
+     *
+     * @param xmldb_table $xmldb_table Table to change.
+     * @param string $oldname Only use for renamed field.
+     * @param string $newname Only use for renamed field.
+     *
      * @return array of strings (SQL statements to alter the table structure)
      */
-    protected function getAlterTableSchema($xmldb_table, $xmldb_add_field=NULL, $xmldb_delete_field=NULL) {
-    /// Get the quoted name of the table and field
+    protected function getAlterTableSchema($xmldb_table, string $oldname = null, string $newname = null) {
+        // Get the quoted name of the table and field.
         $tablename = $this->getTableName($xmldb_table);
 
-        $oldname = $xmldb_delete_field ? $xmldb_delete_field->getName() : NULL;
-        $newname = $xmldb_add_field ? $xmldb_add_field->getName() : NULL;
-        if($xmldb_delete_field) {
-            $xmldb_table->deleteField($oldname);
-        }
-        if($xmldb_add_field) {
-            $xmldb_table->addField($xmldb_add_field);
-        }
-        if($oldname) {
-            // alter indexes
-            $indexes = $xmldb_table->getIndexes();
-            foreach($indexes as $index) {
-                $fields = $index->getFields();
-                $i = array_search($oldname, $fields);
-                if($i!==FALSE) {
-                    if($newname) {
-                        $fields[$i] = $newname;
-                    } else {
-                        unset($fields[$i]);
-                    }
-                    $xmldb_table->deleteIndex($index->getName());
-                    if(count($fields)) {
-                        $index->setFields($fields);
-                        $xmldb_table->addIndex($index);
-                    }
-                }
-            }
-            // alter keys
-            $keys = $xmldb_table->getKeys();
-            foreach($keys as $key) {
-                $fields = $key->getFields();
-                $reffields = $key->getRefFields();
-                $i = array_search($oldname, $fields);
-                if($i!==FALSE) {
-                    if($newname) {
-                        $fields[$i] = $newname;
-                    } else {
-                        unset($fields[$i]);
-                        unset($reffields[$i]);
-                    }
-                    $xmldb_table->deleteKey($key->getName());
-                    if(count($fields)) {
-                        $key->setFields($fields);
-                        $key->setRefFields($fields);
-                        $xmldb_table->addkey($key);
-                    }
-                }
-            }
-        }
-        // prepare data copy
-        $fields = $xmldb_table->getFields();
-        foreach ($fields as $key => $field) {
+        // Prepare data copy.
+        $fields = array();
+        foreach ($xmldb_table->getFields() as $field) {
             $fieldname = $field->getName();
-            if($fieldname == $newname && $oldname && $oldname != $newname) {
-                // field rename operation
-                $fields[$key] = $this->getEncQuoted($oldname) . ' AS ' . $this->getEncQuoted($newname);
+            if ($oldname !== null && $fieldname === $newname) {
+                // Handle field rename operation.
+                $fields[] = $this->getEncQuoted($oldname) . ' AS ' . $this->getEncQuoted($newname);
             } else {
-                $fields[$key] = $this->getEncQuoted($field->getName());
+                $fields[] = $this->getEncQuoted($fieldname);
             }
         }
-        $fields = implode(',', $fields);
+
+        $results = array();
         $results[] = 'BEGIN TRANSACTION';
         $results[] = 'CREATE TEMPORARY TABLE temp_data AS SELECT * FROM ' . $tablename;
         $results[] = 'DROP TABLE ' . $tablename;
-        $results = array_merge($results, $this->getCreateTableSQL($xmldb_table));
-        $results[] = 'INSERT INTO ' . $tablename . ' SELECT ' . $fields . ' FROM temp_data';
+        $results[] = implode(';', $this->getCreateTableSQL($xmldb_table));
+        $results[] = 'INSERT INTO ' . $tablename . ' SELECT ' . implode(',', $fields) . ' FROM temp_data';
         $results[] = 'DROP TABLE temp_data';
         $results[] = 'COMMIT';
+
         return $results;
     }
 
@@ -283,18 +227,29 @@ class sqlite_sql_generator extends sql_generator {
      * @param string $skip_type_clause The type clause on alter columns, NULL by default.
      * @param string $skip_default_clause The default clause on alter columns, NULL by default.
      * @param string $skip_notnull_clause The null/notnull clause on alter columns, NULL by default.
+     *
      * @return string The field altering SQL statement.
      */
     public function getAlterFieldSQL($xmldb_table, $xmldb_field, $skip_type_clause = NULL, $skip_default_clause = NULL, $skip_notnull_clause = NULL) {
-        return $this->getAlterTableSchema($xmldb_table, $xmldb_field, $xmldb_field);
+        $xmldb_table->deleteField($xmldb_field->getName());
+        $xmldb_table->addField($xmldb_field);
+
+        return $this->getAlterTableSchema($xmldb_table);
     }
 
     /**
      * Given one xmldb_table and one xmldb_key, return the SQL statements needed to add the key to the table
      * note that underlying indexes will be added as parametrised by $xxxx_keys and $xxxx_index parameters
+     *
+     * @param xmldb_table $xmldb_table The table related to $xmldb_key.
+     * @param xmldb_key $xmldb_key The instance of xmldb_key to create.
+     *
+     * @return string The field altering SQL statement.
      */
     public function getAddKeySQL($xmldb_table, $xmldb_key) {
+        $xmldb_table->deleteKey($xmldb_key->getName());
         $xmldb_table->addKey($xmldb_key);
+
         return $this->getAlterTableSchema($xmldb_table);
     }
 
@@ -304,10 +259,14 @@ class sqlite_sql_generator extends sql_generator {
      *
      * @param xmldb_table $xmldb_table The xmldb_table object instance.
      * @param xmldb_field $xmldb_field The xmldb_field object instance.
+     *
      * @return array Array of SQL statements to create a field's default.
      */
     public function getCreateDefaultSQL($xmldb_table, $xmldb_field) {
-        return $this->getAlterTableSchema($xmldb_table, $xmldb_field, $xmldb_field);
+        $xmldb_table->deleteField($xmldb_field->getName());
+        $xmldb_table->addField($xmldb_field);
+
+        return $this->getAlterTableSchema($xmldb_table);
     }
 
     /**
@@ -317,19 +276,57 @@ class sqlite_sql_generator extends sql_generator {
      * @param xmldb_table $xmldb_table The table related to $xmldb_field.
      * @param xmldb_field $xmldb_field The instance of xmldb_field to get the renamed field from.
      * @param string $newname The new name to rename the field to.
+     *
      * @return array The SQL statements for renaming the field.
      */
     public function getRenameFieldSQL($xmldb_table, $xmldb_field, $newname) {
         $oldfield = clone($xmldb_field);
+
+        $xmldb_table->deleteField($oldfield->getName());
+
+        $xmldb_table->addField($xmldb_field);
         $xmldb_field->setName($newname);
-        return $this->getAlterTableSchema($xmldb_table, $xmldb_field, $oldfield);
+
+        // Alter indexes.
+        $indexes = $xmldb_table->getIndexes();
+        foreach ($indexes as $index) {
+            $fields = $index->getFields();
+            $i = array_search($oldfield->getName(), $fields);
+            if ($i !== false) {
+                $fields[$i] = $xmldb_field->getName();
+
+                $index->setFields($fields);
+            }
+        }
+
+        // Alter keys.
+        $keys = $xmldb_table->getKeys();
+        foreach ($keys as $key) {
+            $fields = $key->getFields();
+            $reffields = $key->getRefFields();
+            $i = array_search($oldfield->getName(), $fields);
+            if ($i !== false) {
+                $fields[$i] = $xmldb_field->getName();
+
+                $key->setFields($fields);
+                $key->setRefFields($fields);
+            }
+        }
+
+        return $this->getAlterTableSchema($xmldb_table, $oldfield->getName(), $newname);
     }
 
     /**
      * Given one xmldb_table and one xmldb_index, return the SQL statements needed to rename the index in the table
+     *
+     * @param xmldb_table $xmldb_table The table related to $xmldb_index.
+     * @param xmldb_index $xmldb_index The instance of xmldb_index to rename.
+     * @param string $newname The new name to rename the index to.
+     *
+     * @return string The field altering SQL statement.
      */
     function getRenameIndexSQL($xmldb_table, $xmldb_index, $newname) {
-    /// Get the real index name
+        // Get the real index name.
         $dbindexname = $this->mdb->get_manager()->find_index_name($xmldb_table, $xmldb_index);
         $xmldb_index->setName($newname);
         $results = array('DROP INDEX ' . $dbindexname);
@@ -339,7 +336,12 @@ class sqlite_sql_generator extends sql_generator {
 
     /**
      * Given one xmldb_table and one xmldb_key, return the SQL statements needed to rename the key in the table
-     * Experimental! Shouldn't be used at all!
+     *
+     * @param xmldb_table $xmldb_table The table related to $xmldb_key.
+     * @param xmldb_key $xmldb_key The instance of xmldb_key to rename.
+     * @param string $newname The new name to rename the key to.
+     *
+     * @return string The field altering SQL statement.
      */
     public function getRenameKeySQL($xmldb_table, $xmldb_key, $newname) {
         $xmldb_table->deleteKey($xmldb_key->getName());
@@ -352,15 +354,59 @@ class sqlite_sql_generator extends sql_generator {
      * Given one xmldb_table and one xmldb_field, return the SQL statements needed to drop the field from the table.
      *
      * @param xmldb_table $xmldb_table The table related to $xmldb_field.
-     * @param xmldb_field $xmldb_field The instance of xmldb_field to create the SQL from.
+     * @param xmldb_field $xmldb_field The instance of xmldb_field to drop.
+     *
      * @return array The SQL statement for dropping a field from the table.
      */
     public function getDropFieldSQL($xmldb_table, $xmldb_field) {
-        return $this->getAlterTableSchema($xmldb_table, NULL, $xmldb_field);
+        $fieldname = $xmldb_field->getName();
+        $xmldb_table->deleteField($fieldname);
+
+        // Alter indexes.
+        $indexes = $xmldb_table->getIndexes();
+        foreach ($indexes as $index) {
+            $fields = $index->getFields();
+            $i = array_search($fieldname, $fields);
+            if ($i !== false) {
+                unset($fields[$i]);
+
+                $xmldb_table->deleteIndex($index->getName());
+                if (count($fields)) {
+                    $index->setFields($fields);
+                    $xmldb_table->addIndex($index);
+                }
+            }
+        }
+
+        // Alter keys.
+        $keys = $xmldb_table->getKeys();
+        foreach ($keys as $key) {
+            $fields = $key->getFields();
+            $reffields = $key->getRefFields();
+            $i = array_search($fieldname, $fields);
+            if ($i !== false) {
+                unset($fields[$i]);
+                unset($reffields[$i]);
+
+                $xmldb_table->deleteKey($key->getName());
+                if (count($fields)) {
+                    $key->setFields($fields);
+                    $key->setRefFields($fields);
+                    $xmldb_table->addkey($key);
+                }
+            }
+        }
+
+        return $this->getAlterTableSchema($xmldb_table);
     }
 
     /**
      * Given one xmldb_table and one xmldb_index, return the SQL statements needed to drop the index from the table
+     *
+     * @param xmldb_table $xmldb_table The table related to $xmldb_index.
+     * @param xmldb_index $xmldb_index The instance of xmldb_index to drop.
+     *
+     * @return string The field altering SQL statement.
      */
     public function getDropIndexSQL($xmldb_table, $xmldb_index) {
         $xmldb_table->deleteIndex($xmldb_index->getName());
@@ -368,7 +414,12 @@ class sqlite_sql_generator extends sql_generator {
     }
 
     /**
-     * Given one xmldb_table and one xmldb_index, return the SQL statements needed to drop the index from the table
+     * Given one xmldb_table and one xmldb_key, return the SQL statements needed to drop the key from the table
+     *
+     * @param xmldb_table $xmldb_table The table related to $xmldb_key.
+     * @param xmldb_key $xmldb_key The instance of xmldb_key to drop.
+     *
+     * @return string The field altering SQL statement.
      */
     public function getDropKeySQL($xmldb_table, $xmldb_key) {
         $xmldb_table->deleteKey($xmldb_key->getName());
@@ -388,7 +439,10 @@ class sqlite_sql_generator extends sql_generator {
      * @todo MDL-31147 Moodle 2.1 - Drop getDropDefaultSQL()
      */
     public function getDropDefaultSQL($xmldb_table, $xmldb_field) {
-        return $this->getAlterTableSchema($xmldb_table, $xmldb_field, $xmldb_field);
+        $xmldb_table->deleteField($xmldb_field->getName());
+        $xmldb_table->addField($xmldb_field);
+
+        return $this->getAlterTableSchema($xmldb_table);
     }
 
     /**
@@ -397,7 +451,7 @@ class sqlite_sql_generator extends sql_generator {
      * @param xmldb_table $xmldb_table The xmldb_table object instance.
      * @return array Array of SQL statements to add one comment to the table.
      */
-    function getCommentSQL ($xmldb_table) {
+    public function getCommentSQL($xmldb_table) {
         return array();
     }
 
@@ -459,5 +513,19 @@ class sqlite_sql_generator extends sql_generator {
         // do not use php addslashes() because it depends on PHP quote settings!
         $s = str_replace("'",  "''", $s);
         return $s;
+    }
+
+    /**
+     * Given one correct xmldb_table, returns the SQL statements
+     * to create temporary table (inside one array).
+     *
+     * @param xmldb_table $xmldb_table The xmldb_table object instance.
+     * @return array of sql statements
+     */
+    public function getCreateTempTableSQL($xmldb_table) {
+        $this->temptables->add_temptable($xmldb_table->getName());
+        $sqlarr = $this->getCreateTableSQL($xmldb_table);
+        $sqlarr = preg_replace('/^CREATE TABLE/', "CREATE TEMPORARY TABLE", $sqlarr);
+        return $sqlarr;
     }
 }

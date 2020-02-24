@@ -39,9 +39,8 @@ class pdo_moodle_recordset extends moodle_recordset {
     protected $current;
 
     public function __construct($sth) {
-        $this->sth = $sth;
-        $this->sth->setFetchMode(PDO::FETCH_ASSOC);
-        $this->current = $this->fetch_next();
+        $this->result = $sth->fetchAll(PDO::FETCH_ASSOC);
+        $this->current = current($this->result);
     }
 
     public function __destruct() {
@@ -49,7 +48,7 @@ class pdo_moodle_recordset extends moodle_recordset {
     }
 
     private function fetch_next() {
-        if ($row = $this->sth->fetch()) {
+        if ($row = next($this->result)) {
             $row = array_change_key_case($row, CASE_LOWER);
         }
         return $row;
@@ -77,10 +76,7 @@ class pdo_moodle_recordset extends moodle_recordset {
     }
 
     public function close() {
-        if ($this->sth) {
-            $this->sth->closeCursor();
-            $this->sth = null;
-        }
+        $this->result = null;
         $this->current = null;
     }
 }

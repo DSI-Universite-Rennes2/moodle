@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__.'/moodle_database.php');
+require_once(__DIR__.'/moodle_temptables.php');
 require_once(__DIR__.'/pdo_moodle_recordset.php');
 
 /**
@@ -74,6 +75,10 @@ abstract class pdo_moodle_database extends moodle_database {
             $this->pdb->setAttribute(PDO::ATTR_CASE, PDO::CASE_LOWER);
             $this->pdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->configure_dbconnection();
+
+            // Connection stabilised and configured, going to instantiate the temptables controller.
+            $this->temptables = new moodle_temptables($this);
+
             return true;
         } catch (PDOException $ex) {
             throw new dml_connection_exception($ex->getMessage());
@@ -136,10 +141,16 @@ abstract class pdo_moodle_database extends moodle_database {
         $result = array();
         try {
             $result['description'] = $this->pdb->getAttribute(PDO::ATTR_SERVER_INFO);
-        } catch(PDOException $ex) {}
+        } catch(PDOException $ex) {
+            $result['description'] = '';
+        }
+
         try {
             $result['version'] = $this->pdb->getAttribute(PDO::ATTR_SERVER_VERSION);
-        } catch(PDOException $ex) {}
+        } catch(PDOException $ex) {
+            $result['version'] = '';
+        }
+
         return $result;
     }
 
@@ -185,14 +196,13 @@ abstract class pdo_moodle_database extends moodle_database {
 
         try {
             foreach ($sqls as $sql) {
-                $result = true;
                 $this->query_start($sql, null, SQL_QUERY_STRUCTURE);
 
+                $result = false;
                 try {
-                    $this->pdb->exec($sql);
+                    $result = $this->pdb->exec($sql);
                 } catch (PDOException $ex) {
                     $this->lastError = $ex->getMessage();
-                    $result = false;
                 }
                 $this->query_end($result);
             }
@@ -234,19 +244,39 @@ abstract class pdo_moodle_database extends moodle_database {
     public function execute($sql, array $params=null) {
         list($sql, $params, $type) = $this->fix_sql_params($sql, $params);
 
-        $result = true;
         $this->query_start($sql, $params, SQL_QUERY_UPDATE);
 
+        $result = false;
         try {
             $sth = $this->pdb->prepare($sql);
-            $sth->execute($params);
+            $result = $sth->execute($params);
         } catch (PDOException $ex) {
             $this->lastError = $ex->getMessage();
-            $result = false;
         }
 
         $this->query_end($result);
         return $result;
+    }
+
+    /**
+     * Returns the sql statement with clauses to append used to limit a recordset range.
+     *
+     * @param string $sql the SQL statement to limit.
+     * @param int $limitfrom return a subset of records, starting at this point (optional, required if $limitnum is set).
+     * @param int $limitnum return a subset comprising this many records (optional, required if $limitfrom is set).
+     *
+     * @return string the SQL statement with limiting clauses
+     */
+    protected function get_limit_clauses($sql, $limitfrom=0, $limitnum=0) {
+        if ($limitnum) {
+            $sql .= ' LIMIT '.$limitnum;
+        }
+
+        if ($limitfrom) {
+            $sql .= ' OFFSET '.$limitfrom;
+        }
+
+        return $sql;
     }
 
     /**
@@ -266,22 +296,24 @@ abstract class pdo_moodle_database extends moodle_database {
      */
     public function get_recordset_sql($sql, array $params=null, $limitfrom=0, $limitnum=0) {
 
-        $result = true;
-
         list($sql, $params, $type) = $this->fix_sql_params($sql, $params);
+
+        list($limitfrom, $limitnum) = $this->normalise_limit_from_num($limitfrom, $limitnum);
         $sql = $this->get_limit_clauses($sql, $limitfrom, $limitnum);
+
         $this->query_start($sql, $params, SQL_QUERY_SELECT);
 
+        $result = false;
         try {
             $sth = $this->pdb->prepare($sql);
             $sth->execute($params);
             $result = $this->create_recordset($sth);
         } catch (PDOException $ex) {
             $this->lastError = $ex->getMessage();
-            $result = false;
         }
 
         $this->query_end($result);
+
         return $result;
     }
 
@@ -294,10 +326,7 @@ abstract class pdo_moodle_database extends moodle_database {
      */
     public function get_fieldset_sql($sql, array $params=null) {
         $rs = $this->get_recordset_sql($sql, $params);
-        if (!$rs->valid()) {
-            $rs->close(); // Not going to iterate (but exit), close rs
-            return false;
-        }
+
         $result = array();
         foreach($rs as $value) {
             $result[] = reset($value);
@@ -323,20 +352,34 @@ abstract class pdo_moodle_database extends moodle_database {
     public function get_records_sql($sql, array $params=null, $limitfrom=0, $limitnum=0) {
         global $CFG;
 
-        $rs = $this->get_recordset_sql($sql, $params, $limitfrom, $limitnum);
-        if (!$rs->valid()) {
-            $rs->close(); // Not going to iterate (but exit), close rs
+        list($sql, $params, $type) = $this->fix_sql_params($sql, $params);
+
+        list($limitfrom, $limitnum) = $this->normalise_limit_from_num($limitfrom, $limitnum);
+        $sql = $this->get_limit_clauses($sql, $limitfrom, $limitnum);
+
+        $this->query_start($sql, $params, SQL_QUERY_SELECT);
+        try {
+            $sth = $this->pdb->prepare($sql);
+            $sth->execute($params);
+        } catch (PDOException $ex) {
+            $this->query_end(false);
             return false;
         }
+
+        $result = $sth->fetchAll(PDO::FETCH_ASSOC);
+        $this->query_end($result);
+
         $objects = array();
-        foreach($rs as $value) {
+        foreach ($result as $value) {
             $key = reset($value);
             if ($CFG->debugdeveloper && array_key_exists($key, $objects)) {
                 debugging("Did you remember to make the first column something unique in your call to get_records? Duplicate value '$key' found in column first column of '$sql'.", DEBUG_DEVELOPER);
             }
             $objects[$key] = (object)$value;
         }
-        $rs->close();
+
+        $sth->closeCursor();
+
         return $objects;
     }
 
@@ -413,14 +456,7 @@ abstract class pdo_moodle_database extends moodle_database {
                 continue;
             }
             $column = $columns[$field];
-            if (is_bool($value)) {
-                $value = (int)$value; // prevent "false" problems
-            }
-            $cleaned[$field] = $value;
-        }
-
-        if (empty($cleaned)) {
-            return false;
+            $cleaned[$field] = $this->normalise_value($column, $value);
         }
 
         return $this->insert_record_raw($table, $cleaned, $returnid, $bulk);
@@ -534,43 +570,86 @@ abstract class pdo_moodle_database extends moodle_database {
         return $this->execute($sql, $params);
     }
 
+    /**
+     * Returns the proper SQL to do CONCAT between the elements(fieldnames) passed.
+     *
+     * This function accepts variable number of string parameters.
+     * All strings/fieldnames will used in the SQL concatenate statement generated.
+     *
+     * @return string The SQL to concatenate strings passed in.
+     * @uses func_get_args()  and thus parameters are unlimited OPTIONAL number of additional field names.
+     */
     public function sql_concat() {
         print_error('TODO');
     }
 
+    /**
+     * Returns the proper SQL to do CONCAT between the elements passed
+     * with a given separator
+     *
+     * @param string $separator The separator desired for the SQL concatenating $elements.
+     * @param array  $elements The array of strings to be concatenated.
+     *
+     * @return string The SQL to concatenate the strings.
+     */
     public function sql_concat_join($separator="' '", $elements=array()) {
         print_error('TODO');
     }
 
+    /**
+     * Driver specific start of real database transaction,
+     * this can not be used directly in code.
+     *
+     * @return void
+     */
     protected function begin_transaction() {
         $this->query_start('', NULL, SQL_QUERY_AUX);
+
+        $result = false;
         try {
-            $this->pdb->beginTransaction();
+            $result = $this->pdb->beginTransaction();
         } catch(PDOException $ex) {
             $this->lastError = $ex->getMessage();
         }
+
         $this->query_end($result);
     }
 
+    /**
+     * Driver specific commit of real database transaction,
+     * this can not be used directly in code.
+     *
+     * @return void
+     */
     protected function commit_transaction() {
         $this->query_start('', NULL, SQL_QUERY_AUX);
 
+        $result = false;
         try {
-            $this->pdb->commit();
+            $result = $this->pdb->commit();
         } catch(PDOException $ex) {
             $this->lastError = $ex->getMessage();
         }
+
         $this->query_end($result);
     }
 
+    /**
+     * Driver specific abort of real database transaction,
+     * this can not be used directly in code.
+     *
+     * @return void
+     */
     protected function rollback_transaction() {
         $this->query_start('', NULL, SQL_QUERY_AUX);
 
+        $result = false;
         try {
-            $this->pdb->rollBack();
+            $result = $this->pdb->rollBack();
         } catch(PDOException $ex) {
             $this->lastError = $ex->getMessage();
         }
+
         $this->query_end($result);
     }
 
