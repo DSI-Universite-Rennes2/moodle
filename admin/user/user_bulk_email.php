@@ -95,10 +95,10 @@ if ($mform->is_cancelled()) {
     $usernames = implode(', ', $userlist);
     echo $OUTPUT->header();
     echo $OUTPUT->heading(get_string('confirmation', 'admin'));
-    echo $OUTPUT->box($preview, 'boxwidthnarrow boxaligncenter generalbox', 'preview'); //TODO: clean once we start using proper text formats here
+    echo $OUTPUT->box($preview, 'boxwidthnarrow boxaligncenter generalbox', 'preview');
 
     $post = array('confirm' => 1, 'subject' => $formdata->subject, 'carboncopy' => $carboncopy, 'text' => $text);
-    $formcontinue = new single_button(new moodle_url('user_bulk_email.php', $post), get_string('yes')); //TODO: clean once we start using proper text formats here
+    $formcontinue = new single_button(new moodle_url('user_bulk_email.php', $post), get_string('yes'));
     $formcancel = new single_button(new moodle_url('user_bulk.php'), get_string('no'), 'get');
     echo $OUTPUT->confirm(get_string('confirmemail', 'bulkusers', $usernames), $formcontinue, $formcancel);
     echo $OUTPUT->footer();
