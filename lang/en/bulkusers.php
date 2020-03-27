@@ -29,6 +29,7 @@ $string['allfilteredusers'] = 'All filtered ({$a->count}/{$a->total})';
 $string['allselectedusers'] = 'All selected ({$a->count}/{$a->total})';
 $string['allusers'] = 'All users ({$a})';
 $string['available'] = 'Available';
+$string['confirmemail'] = 'Do you really want to send the email above to all these users?<br />{$a}';
 $string['confirmmessage'] = 'Do you really want to send the message above to all these users?<br />{$a}';
 $string['deleteduser'] = 'Deleted user';
 $string['nofilteredusers'] = 'No users found (0/{$a})';

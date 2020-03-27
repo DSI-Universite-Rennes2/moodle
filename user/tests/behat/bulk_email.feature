@@ -25,10 +25,25 @@ Feature: Bulk emails
     Given I log in as "teacher1"
     And I am on "Course 1" course homepage
     And I navigate to course participants
-    And I press "Select all"
+    And I click on "Select all" "checkbox"
     And I set the field "With selected users..." to "Send an email"
     And I should see "Send email to 3 people"
     And I set the following fields to these values:
-      | bulk-message | "Hello world!" |
+      | Subject | Hi |
+      | Message | Hello world! |
     When I press "Send email to 3 people"
     Then I should see "Email sent to 3 people"
+
+  Scenario: Send an email to students from participants list with carbon copy
+    Given I log in as "admin"
+    And I am on "Course 1" course homepage
+    And I navigate to course participants
+    And I click on "Select all" "checkbox"
+    And I set the field "With selected users..." to "Send an email"
+    And I should see "Send email to 3 people"
+    And I set the following fields to these values:
+      | Subject | Hi |
+      | Message | Hello world! |
+    And I click on "Carbon copy" "checkbox"
+    When I press "Send email to 3 people"
+    Then I should see "Email sent to 4 people"

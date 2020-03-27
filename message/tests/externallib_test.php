@@ -339,6 +339,128 @@ class core_message_externallib_testcase extends externallib_advanced_testcase {
     }
 
     /**
+     * Test send_instant_emails.
+     */
+    public function test_send_instant_emails() {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+
+        // Transactions used in tests, tell phpunit use alternative reset method.
+        $this->preventResetByRollback();
+
+        $user1 = self::getDataGenerator()->create_user();
+        $user2 = self::getDataGenerator()->create_user();
+
+        $this->setUser($user1);
+
+        // Disable mail.
+        $CFG->noemailever = true;
+        $CFG->emailbulkmessaging = 1;
+        $noemaildebugmessage = 'Not sending email due to $CFG->noemailever config setting';
+
+        // Create test message data.
+        $message = array();
+        $message['subject'] = 'the subject';
+        $message['carboncopy'] = false;
+        $message['text'] = 'the message';
+        $message['receivers'] = array($user2->id);
+        $messages = array($message);
+
+        // Test email sending.
+        $sentemails = core_message_external::send_instant_emails($messages);
+        $sentemails = external_api::clean_returnvalue(core_message_external::send_instant_emails_returns(), $sentemails);
+        $this->assertDebuggingCalled($noemaildebugmessage, DEBUG_NORMAL);
+
+        // Test carbon copy.
+        $count = 2;
+        $messages[0]['carboncopy'] = true;
+        $sentemails = core_message_external::send_instant_emails($messages);
+        $sentemails = external_api::clean_returnvalue(core_message_external::send_instant_emails_returns(), $sentemails);
+        $this->assertDebuggingCalledCount($count, array_fill(0, $count, $noemaildebugmessage), array_fill(0, $count, DEBUG_NORMAL));
+
+        // Test on deleted user.
+        $user2->deleted = 1;
+        $DB->update_record('user', $user2);
+
+        $messages[0]['carboncopy'] = false;
+        $sentemails = core_message_external::send_instant_emails($messages);
+        $sentemails = external_api::clean_returnvalue(core_message_external::send_instant_emails_returns(), $sentemails);
+        $this->assertDebuggingNotCalled($noemaildebugmessage);
+
+        // Test to send message only once per user.
+        $messages[0]['carboncopy'] = true;
+        $messages[0]['receivers'] = array($user1->id);
+        $sentemails = core_message_external::send_instant_emails($messages);
+        $sentemails = external_api::clean_returnvalue(core_message_external::send_instant_emails_returns(), $sentemails);
+        $this->assertDebuggingCalled($noemaildebugmessage, DEBUG_NORMAL);
+    }
+
+    /**
+     * Test send_instant_emails with no capabilities.
+     */
+    public function test_send_instant_emails_no_capability() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+
+        // Transactions used in tests, tell phpunit use alternative reset method.
+        $this->preventResetByRollback();
+
+        $user1 = self::getDataGenerator()->create_user();
+        $user2 = self::getDataGenerator()->create_user();
+
+        $this->setUser($user1);
+
+        // Unset the required capabilities by the external function.
+        $contextid = context_system::instance()->id;
+        $userrole = $DB->get_record('role', array('shortname' => 'user'));
+        $this->unassignUserCapability('moodle/site:sendmessage', $contextid, $userrole->id);
+
+        // Create test message data.
+        $message = array();
+        $message['subject'] = 'the subject';
+        $message['carboncopy'] = false;
+        $message['text'] = 'the message';
+        $message['receivers'] = array($user2->id);
+        $messages = array($message);
+
+        $this->expectException('required_capability_exception');
+        core_message_external::send_instant_messages($messages);
+    }
+
+    /**
+     * Test send_instant_emails when emailbulkmessaging is disabled.
+     */
+    public function test_send_instant_emails_emailbulkmessaging_disabled() {
+        global $CFG;
+
+        $this->resetAfterTest(true);
+
+        // Transactions used in tests, tell phpunit use alternative reset method.
+        $this->preventResetByRollback();
+
+        $user1 = self::getDataGenerator()->create_user();
+        $user2 = self::getDataGenerator()->create_user();
+
+        $this->setUser($user1);
+
+        // Disable messaging.
+        $CFG->emailbulkmessaging = 0;
+
+        // Create test message data.
+        $message = array();
+        $message['subject'] = 'the subject';
+        $message['carboncopy'] = false;
+        $message['text'] = 'the message';
+        $message['receivers'] = array($user2->id);
+        $messages = array($message);
+
+        $this->expectException('moodle_exception');
+        core_message_external::send_instant_emails($messages);
+    }
+
+    /**
      * Test create_contacts.
      */
     public function test_create_contacts() {

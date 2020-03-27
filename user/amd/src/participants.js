@@ -22,8 +22,9 @@
  * @copyright  2017 Damyon Wiese
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/templates', 'core/notification', 'core/ajax'],
-        function($, Str, ModalFactory, ModalEvents, Templates, Notification, Ajax) {
+define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events',
+        'core/fragment', 'core/templates', 'core/notification', 'core/ajax'],
+        function($, Str, ModalFactory, ModalEvents, Fragment, Templates, Notification, Ajax) {
 
     var SELECTORS = {
         BULKACTIONSELECT: "#formactionid",
@@ -44,6 +45,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
     var Participants = function(options) {
 
         this.courseId = options.courseid;
+        this.contextId = options.contextid;
         this.noteStateNames = options.noteStateNames;
         this.stateHelpIcon = options.stateHelpIcon;
 
@@ -95,9 +97,9 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
                 });
 
                 if (action == '#messageselect') {
-                    this.showSendMessage(ids, 'message').fail(Notification.exception);
+                    this.showSendMessage(ids).fail(Notification.exception);
                 } else if (action == '#emailselect') {
-                    this.showSendMessage(ids, 'email').fail(Notification.exception);
+                    this.showSendEmail(ids).fail(Notification.exception);
                 } else if (action == '#addgroupnote') {
                     this.showAddNote(ids).fail(Notification.exception);
                 }
@@ -236,17 +238,18 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
      * @param {int[]} users
      * @return {Promise}
      */
-    Participants.prototype.showSendMessage = function(users, messagetype) {
+    Participants.prototype.showSendMessage = function(users) {
 
         if (users.length == 0) {
             // Nothing to do.
             return $.Deferred().resolve().promise();
         }
+
         var titlePromise = null;
         if (users.length == 1) {
-            titlePromise = Str.get_string('sendbulk' + messagetype + 'single', 'core_message');
+            titlePromise = Str.get_string('sendbulkmessagesingle', 'core_message');
         } else {
-            titlePromise = Str.get_string('sendbulk' + messagetype, 'core_message', users.length);
+            titlePromise = Str.get_string('sendbulkmessage', 'core_message', users.length);
         }
 
         return $.when(
@@ -268,7 +271,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
                 this.modal.getRoot().remove();
             }.bind(this));
 
-            this.modal.getRoot().on(ModalEvents.save, this.submitSendMessage.bind(this, users, messagetype));
+            this.modal.getRoot().on(ModalEvents.save, this.submitSendMessage.bind(this, users));
 
             this.modal.show();
 
@@ -285,7 +288,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
      * @param {Event} e Form submission event.
      * @return {Promise}
      */
-    Participants.prototype.submitSendMessage = function(users, messagetype) {
+    Participants.prototype.submitSendMessage = function(users) {
 
         var messageText = this.modal.getRoot().find('form textarea').val();
 
@@ -297,13 +300,122 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
         }
 
         return Ajax.call([{
-            methodname: 'core_message_send_instant_' + messagetype + 's',
+            methodname: 'core_message_send_instant_messages',
             args: {messages: messages}
         }])[0].then(function(messageIds) {
             if (messageIds.length == 1) {
-                return Str.get_string('sendbulk' + messagetype + 'sentsingle', 'core_message');
+                return Str.get_string('sendbulkmessagesentsingle', 'core_message');
             } else {
-                return Str.get_string('sendbulk' + messagetype + 'sent', 'core_message', messageIds.length);
+                return Str.get_string('sendbulkmessagesent', 'core_message', messageIds.length);
+            }
+        }).then(function(msg) {
+            Notification.addNotification({
+                message: msg,
+                type: "success"
+            });
+            return true;
+        }).catch(Notification.exception);
+    };
+
+    /**
+     * Show the send email popup.
+     *
+     * @method showSendEmail
+     * @private
+     * @param {int[]} users
+     * @return {Promise}
+     */
+    Participants.prototype.showSendEmail = function(users) {
+
+        if (users.length == 0) {
+            // Nothing to do.
+            return $.Deferred().resolve().promise();
+        }
+
+        var titlePromise = null;
+        if (users.length == 1) {
+            titlePromise = Str.get_string('sendbulkemailsingle', 'core_message');
+        } else {
+            titlePromise = Str.get_string('sendbulkemail', 'core_message', users.length);
+        }
+
+        return $.when(
+            ModalFactory.create({
+                type: ModalFactory.types.SAVE_CANCEL,
+                body: this.getSendEmailFormBody()
+            }),
+            titlePromise
+        ).then(function(modal, title) {
+            // Keep a reference to the modal.
+            this.modal = modal;
+
+            this.modal.setTitle(title);
+            this.modal.setSaveButtonText(title);
+
+            // Forms are big, we want a big modal.
+            this.modal.setLarge();
+
+            // We want to reset the form every time it is opened.
+            this.modal.getRoot().on(ModalEvents.hidden, function() {
+                this.modal.destroy();
+            }.bind(this));
+
+            // We want to hide the submit buttons every time it is opened.
+            this.modal.getRoot().on(ModalEvents.shown, function() {
+                this.modal.getRoot().append('<style>[data-fieldtype=submit] { display: none ! important; }</style>');
+            }.bind(this));
+
+            // We catch the modal save event, and use it to submit the form inside the modal.
+            // Triggering a form submission will give JS validation scripts a chance to check for errors.
+            this.modal.getRoot().on(ModalEvents.save, this.submitSendEmail.bind(this, users));
+
+            this.modal.show();
+
+            return this.modal;
+        }.bind(this));
+    };
+
+    /**
+     * @method getSendEmailFormBody
+     * @private
+     * @param {Object} formdata Contains data from form.
+     * @return {Promise}
+     */
+    Participants.prototype.getSendEmailFormBody = function(formdata) {
+        if (typeof formdata === "undefined") {
+            formdata = {};
+        }
+
+        // Get the content of the modal.
+        var params = {jsonformdata: JSON.stringify(formdata)};
+        return Fragment.loadFragment('core_user', 'send_email_form', this.contextId, params);
+    };
+
+    /**
+     * Send an email to these users.
+     *
+     * @method submitSendEmail
+     * @private
+     * @param {int[]} users
+     * @param {Event} e Form submission event.
+     * @return {Promise}
+     */
+    Participants.prototype.submitSendEmail = function(users) {
+
+        var subjectText = this.modal.getRoot().find('form input[name="subject"]').val();
+        var carbonCopy = this.modal.getRoot().find('form input[name="carboncopy"][type="checkbox"]')[0].checked;
+        var messageText = this.modal.getRoot().find('form textarea').val();
+
+        var message = {carboncopy: carbonCopy, subject: subjectText, text: messageText, receivers: users};
+
+        return Ajax.call([{
+            methodname: 'core_message_send_instant_emails',
+            args: {messages: [message]}
+        }])[0].then(function(messageIds) {
+            if (messageIds.length == 1) {
+                return Str.get_string('sendbulkemailsentsingle', 'core_message');
+            } else {
+                return Str.get_string('sendbulkemailsent', 'core_message', messageIds.length);
             }
         }).then(function(msg) {
             Notification.addNotification({

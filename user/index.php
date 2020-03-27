@@ -329,8 +329,10 @@ if ($bulkoperations) {
     }
     echo html_writer::end_tag('div');
     $displaylist = array();
-    $displaylist['#messageselect'] = get_string('messageselectadd');
-    if (!empty($CFG->emailbulkmessaging)) {
+    if (!empty($CFG->messaging) && has_capability('moodle/course:bulkmessaging', $context)) {
+        $displaylist['#messageselect'] = get_string('messageselectadd');
+    }
+    if (!empty($CFG->emailbulkmessaging) && has_capability('moodle/course:bulkmessaging', $context)) {
         $displaylist['#emailselect'] = get_string('emailselectadd', 'message');
     }
     if (!empty($CFG->enablenotes) && has_capability('moodle/notes:manage', $context) && $context->id != $frontpagectx->id) {
@@ -398,6 +400,7 @@ if ($bulkoperations) {
 
     $options = new stdClass();
     $options->courseid = $course->id;
+    $options->contextid = $context->id;
     $options->noteStateNames = note_get_state_names();
     $options->stateHelpIcon = $OUTPUT->help_icon('publishstate', 'notes');
     $PAGE->requires->js_call_amd('core_user/participants', 'init', [$options]);

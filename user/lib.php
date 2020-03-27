@@ -1589,6 +1589,41 @@ function core_user_inplace_editable($itemtype, $itemid, $newvalue) {
 }
 
 /**
+ * Serve the new send email form as a fragment.
+ *
+ * @param array $args List of named arguments for the fragment loader.
+ * @return string
+ */
+function core_user_output_fragment_send_email_form($args) {
+    global $CFG;
+
+    require_once($CFG->dirroot . '/user/send_email_form.php');
+
+    $o = '';
+    $args = (object) $args;
+
+    $formdata = [];
+
+    if (!isset($args->jsonformdata)) {
+        $args->jsonformdata = '{}';
+    }
+
+    if (!empty($args->jsonformdata) && $args->jsonformdata !== '{}') {
+        $serialiseddata = json_decode($args->jsonformdata);
+        parse_str($serialiseddata, $formdata);
+    }
+
+    $mform = new send_email_form(null, null, 'post', '', null, true, $formdata);
+
+    ob_start();
+    $mform->display();
+    $o .= ob_get_contents();
+    ob_end_clean();
+
+    return $o;
+}
+
+/**
  * Map an internal field name to a valid purpose from: "https://www.w3.org/TR/WCAG21/#input-purposes"
  *
  * @param integer $userid
