@@ -1484,6 +1484,15 @@ $functions = array(
         'ajax' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'core_message_send_instant_emails' => array(
+        'classname' => 'core_message_external',
+        'methodname' => 'send_instant_emails',
+        'classpath' => 'message/externallib.php',
+        'description' => 'Send instant emails',
+        'type' => 'write',
+        'capabilities' => 'moodle/site:sendmessage',
+        'ajax' => true,
+    ),
     'core_message_unblock_contacts' => array(
         'classname' => 'core_message_external',
         'methodname' => 'unblock_contacts',

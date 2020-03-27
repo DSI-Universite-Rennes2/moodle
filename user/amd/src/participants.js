@@ -95,7 +95,9 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
                 });
 
                 if (action == '#messageselect') {
-                    this.showSendMessage(ids).fail(Notification.exception);
+                    this.showSendMessage(ids, 'message').fail(Notification.exception);
+                } else if (action == '#emailselect') {
+                    this.showSendMessage(ids, 'email').fail(Notification.exception);
                 } else if (action == '#addgroupnote') {
                     this.showAddNote(ids).fail(Notification.exception);
                 }
@@ -234,7 +236,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
      * @param {int[]} users
      * @return {Promise}
      */
-    Participants.prototype.showSendMessage = function(users) {
+    Participants.prototype.showSendMessage = function(users, messagetype) {
 
         if (users.length == 0) {
             // Nothing to do.
@@ -242,9 +244,9 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
         }
         var titlePromise = null;
         if (users.length == 1) {
-            titlePromise = Str.get_string('sendbulkmessagesingle', 'core_message');
+            titlePromise = Str.get_string('sendbulk' + messagetype + 'single', 'core_message');
         } else {
-            titlePromise = Str.get_string('sendbulkmessage', 'core_message', users.length);
+            titlePromise = Str.get_string('sendbulk' + messagetype, 'core_message', users.length);
         }
 
         return $.when(
@@ -266,7 +268,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
                 this.modal.getRoot().remove();
             }.bind(this));
 
-            this.modal.getRoot().on(ModalEvents.save, this.submitSendMessage.bind(this, users));
+            this.modal.getRoot().on(ModalEvents.save, this.submitSendMessage.bind(this, users, messagetype));
 
             this.modal.show();
 
@@ -283,7 +285,7 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
      * @param {Event} e Form submission event.
      * @return {Promise}
      */
-    Participants.prototype.submitSendMessage = function(users) {
+    Participants.prototype.submitSendMessage = function(users, messagetype) {
 
         var messageText = this.modal.getRoot().find('form textarea').val();
 
@@ -295,13 +297,13 @@ define(['jquery', 'core/str', 'core/modal_factory', 'core/modal_events', 'core/t
         }
 
         return Ajax.call([{
-            methodname: 'core_message_send_instant_messages',
+            methodname: 'core_message_send_instant_' + messagetype + 's',
             args: {messages: messages}
         }])[0].then(function(messageIds) {
             if (messageIds.length == 1) {
-                return Str.get_string('sendbulkmessagesentsingle', 'core_message');
+                return Str.get_string('sendbulk' + messagetype + 'sentsingle', 'core_message');
             } else {
-                return Str.get_string('sendbulkmessagesent', 'core_message', messageIds.length);
+                return Str.get_string('sendbulk' + messagetype + 'sent', 'core_message', messageIds.length);
             }
         }).then(function(msg) {
             Notification.addNotification({
