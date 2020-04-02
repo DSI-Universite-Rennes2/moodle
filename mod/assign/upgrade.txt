@@ -4,6 +4,7 @@ This files describes API changes in the assign code.
 
 * The following functions, previously used (exclusively) by upgrade steps are not available anymore because of the upgrade cleanup performed for this version. See MDL-65809 for more info:
     - get_assignments_with_rescaled_null_grades()
+* The method assign::get_submissionstatement() has been deprecated. Please use assign::get_submission_statement_string() instead.
 
 === 3.8 ===
 * The allow_image_conversion method has been added to the submissionplugins. It determines whether the submission plugin

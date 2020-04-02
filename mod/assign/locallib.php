@@ -5142,12 +5142,11 @@ class assign {
         }
 
         $data = new stdClass();
-        $adminconfig = $this->get_admin_config();
         $requiresubmissionstatement = $this->get_instance()->requiresubmissionstatement;
         $submissionstatement = '';
 
         if ($requiresubmissionstatement) {
-            $submissionstatement = $this->get_submissionstatement($adminconfig, $this->get_instance(), $this->get_context());
+            $submissionstatement = $this->get_submission_statement_string();
         }
 
         // If we get back an empty submission statement, we have to set $requiredsubmisisonstatement to false to prevent
@@ -6613,12 +6612,11 @@ class assign {
         }
 
         $data = new stdClass();
-        $adminconfig = $this->get_admin_config();
         $requiresubmissionstatement = $this->get_instance()->requiresubmissionstatement;
 
         $submissionstatement = '';
         if ($requiresubmissionstatement) {
-            $submissionstatement = $this->get_submissionstatement($adminconfig, $this->get_instance(), $this->get_context());
+            $submissionstatement = $this->get_submission_statement_string();
         }
 
         // If we get back an empty submission statement, we have to set $requiredsubmisisonstatement to false to prevent
@@ -7934,14 +7932,13 @@ class assign {
         }
 
         // Submission statement.
-        $adminconfig = $this->get_admin_config();
         $requiresubmissionstatement = $this->get_instance()->requiresubmissionstatement;
 
         $draftsenabled = $this->get_instance()->submissiondrafts;
         $submissionstatement = '';
 
         if ($requiresubmissionstatement) {
-            $submissionstatement = $this->get_submissionstatement($adminconfig, $this->get_instance(), $this->get_context());
+            $submissionstatement = $this->get_submission_statement_string();
         }
 
         // If we get back an empty submission statement, we have to set $requiredsubmisisonstatement to false to prevent
@@ -9358,49 +9355,53 @@ class assign {
      * @param context $context
      *
      * @return string
+     * @deprecated since Moodle 3.9
      */
     protected function get_submissionstatement($adminconfig, $instance, $context) {
+        debugging(__FUNCTION__.'() is deprecated. Please use assign::get_submission_statement_string() instead.', DEBUG_DEVELOPER);
+
+        return $this->get_submission_statement_string();
+    }
+
+    /**
+     * Get the correct submission statement string depending on single submisison, team submission or team submission
+     * where all team members must submit.
+     *
+     * @return string Return an empty string if there is no submission statement applied.
+     */
+    public function get_submission_statement_string() {
         $submissionstatement = '';
+
+        $context = $this->get_context();
 
         if (!($context instanceof context)) {
             return $submissionstatement;
         }
 
+        $instance = $this->get_instance();
+
         // Single submission.
         if (!$instance->teamsubmission) {
             // Single submission statement is not empty.
-            if (!empty($adminconfig->submissionstatement)) {
-                // Format the submission statement before its sent. We turn off para because this is going within
-                // a form element.
-                $options = array(
-                    'context' => $context,
-                    'para'    => false
-                );
-                $submissionstatement = format_text($adminconfig->submissionstatement, FORMAT_MOODLE, $options);
-            }
+            $submissionstatement = get_string('submissionstatementdefault', 'mod_assign');
         } else { // Team submission.
-            // One user can submit for the whole team.
-            if (!empty($adminconfig->submissionstatementteamsubmission) && !$instance->requireallteammemberssubmit) {
-                // Format the submission statement before its sent. We turn off para because this is going within
-                // a form element.
-                $options = array(
-                    'context' => $context,
-                    'para'    => false
-                );
-                $submissionstatement = format_text($adminconfig->submissionstatementteamsubmission,
-                    FORMAT_MOODLE, $options);
-            } else if (!empty($adminconfig->submissionstatementteamsubmissionallsubmit) &&
-                $instance->requireallteammemberssubmit) {
+            if (!$instance->requireallteammemberssubmit) {
+                // One user can submit for the whole team.
+                $submissionstatement = get_string('submissionstatementteamsubmissiondefault', 'mod_assign');
+            } else if ($instance->requireallteammemberssubmit) {
                 // All team members must submit.
-                // Format the submission statement before its sent. We turn off para because this is going within
-                // a form element.
-                $options = array(
-                    'context' => $context,
-                    'para'    => false
-                );
-                $submissionstatement = format_text($adminconfig->submissionstatementteamsubmissionallsubmit,
-                    FORMAT_MOODLE, $options);
+                $submissionstatement = get_string('submissionstatementteamsubmissionallsubmitdefault', 'mod_assign');
             }
+        }
+
+        if ($submissionstatement) {
+            // Format the submission statement before its sent. We turn off para because this is going within a form element.
+            $options = array(
+                'context' => $context,
+                'para'    => false
+            );
+
+            return format_text($submissionstatement, FORMAT_MOODLE, $options);
         }
 
         return $submissionstatement;

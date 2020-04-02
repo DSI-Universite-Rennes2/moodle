@@ -325,9 +325,8 @@ class mod_assign_external_testcase extends externallib_advanced_testcase {
         $studentrole = $DB->get_record('role', array('shortname' => 'student'));
         $this->getDataGenerator()->enrol_user($student->id, $course->id, $studentrole->id, 'manual');
 
-        // Update the submissionstatement.
-        $submissionstatement = 'This is a fake submission statement.';
-        set_config('submissionstatement', $submissionstatement, 'assign');
+        // Get the submissionstatement.
+        $submissionstatement = get_string('submissionstatementdefault', 'mod_assign');
 
         $this->setUser($student);
 
