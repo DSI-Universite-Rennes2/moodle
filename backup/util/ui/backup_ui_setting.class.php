@@ -147,10 +147,20 @@ class base_setting_ui {
      * @param string $label
      */
     public function set_label($label) {
+        global $CFG;
+
         $label = (string)$label;
-        if ($label === '' || $label !== clean_param($label, PARAM_TEXT)) {
+
+        if (empty($CFG->formatstringstriptags)) {
+            $type = PARAM_CLEANHTML;
+        } else {
+            $type = PARAM_TEXT;
+        }
+
+        if ($label === '' || $label !== clean_param($label, $type)) {
             throw new base_setting_ui_exception('setting_invalid_ui_label');
         }
+
         $this->label = $label;
     }
 
