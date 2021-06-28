@@ -361,7 +361,7 @@ if (!empty($instanceid) && !empty($roleid)) {
         echo html_writer::end_div();
     }
 
-    if (!empty($CFG->messaging)) {
+    if (!empty($CFG->messaging) || !empty($CFG->emailbulkmessaging)) {
         echo '<div class="selectbuttons btn-group">';
         if ($perpage >= $matchcount) {
             $checknos = new \core\output\checkbox_toggleall('participants-table no', true, [
@@ -376,7 +376,12 @@ if (!empty($instanceid) && !empty($roleid)) {
         echo '</div>';
         echo '<div class="py-3">';
         echo html_writer::label(get_string('withselectedusers'), 'formactionid');
-        $displaylist['#messageselect'] = get_string('messageselectadd');
+        if (!empty($CFG->messaging) && has_capability('moodle/course:bulkmessaging', $context)) {
+            $displaylist['#messageselect'] = get_string('messageselectadd');
+        }
+        if (!empty($CFG->emailbulkmessaging) && has_capability('moodle/course:bulkmessaging', $context)) {
+            $displaylist['#emailselect'] = get_string('emailselectadd', 'message');
+        }
         $withselectedparams = array(
             'id' => 'formactionid',
             'data-action' => 'toggle',
@@ -391,6 +396,7 @@ if (!empty($instanceid) && !empty($roleid)) {
 
         $options = new stdClass();
         $options->courseid = $course->id;
+        $options->contextid = $context->id;
         $options->noteStateNames = note_get_state_names();
         $options->stateHelpIcon = $OUTPUT->help_icon('publishstate', 'notes');
         $PAGE->requires->js_call_amd('report_participation/participants', 'init', [$options]);

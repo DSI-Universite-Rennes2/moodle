@@ -228,6 +228,9 @@ if ($bulkoperations) {
     if (!empty($CFG->messaging) && has_all_capabilities(['moodle/site:sendmessage', 'moodle/course:bulkmessaging'], $context)) {
         $displaylist['#messageselect'] = get_string('messageselectadd');
     }
+    if (!empty($CFG->emailbulkmessaging)) {
+        $displaylist['#emailselect'] = get_string('emailselectadd', 'message');
+    }
     if (!empty($CFG->enablenotes) && has_capability('moodle/notes:manage', $context) && $context->id != $frontpagectx->id) {
         $displaylist['#addgroupnote'] = get_string('addnewnote', 'notes');
     }

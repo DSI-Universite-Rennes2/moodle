@@ -26,7 +26,7 @@ import jQuery from 'jquery';
 import CustomEvents from 'core/custom_interaction_events';
 import ModalEvents from 'core/modal_events';
 import Notification from 'core/notification';
-import {showSendMessage} from 'core_user/local/participants/bulkactions';
+import {showSendMessage, showSendEmail} from 'core_user/local/participants/bulkactions';
 
 const Selectors = {
     bulkActionSelect: "#formactionid",
@@ -59,6 +59,19 @@ export const init = () => {
 
                 if (action === '#messageselect') {
                     showSendMessage(ids)
+                    .then(modal => {
+                        modal.getRoot().on(ModalEvents.hidden, () => {
+                            // Focus on the action select when the dialog is closed.
+                            const bulkActionSelector = root.querySelector(Selectors.bulkActionSelect);
+                            resetBulkAction(bulkActionSelector);
+                            bulkActionSelector.focus();
+                        });
+
+                        return modal;
+                    })
+                    .catch(Notification.exception);
+                } else if (action === '#emailselect') {
+                    showSendEmail(ids)
                     .then(modal => {
                         modal.getRoot().on(ModalEvents.hidden, () => {
                             // Focus on the action select when the dialog is closed.

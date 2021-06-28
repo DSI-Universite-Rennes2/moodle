@@ -23,6 +23,7 @@
 
 import * as Repository from 'core_user/repository';
 import * as Str from 'core/str';
+import Fragment from 'core/fragment';
 import ModalEvents from 'core/modal_events';
 import ModalFactory from 'core/modal_factory';
 import Notification from 'core/notification';
@@ -190,6 +191,80 @@ const submitSendMessage = (modal, users, text) => {
             return Str.get_string('sendbulkmessagesentsingle', 'core_message');
         } else {
             return Str.get_string('sendbulkmessagesent', 'core_message', messageIds.length);
+        }
+    })
+    .then(msg => notifyUser(msg))
+    .catch(Notification.exception);
+};
+
+/**
+ * Show the send email popup.
+ *
+ * @param {Number[]} users
+ * @return {Promise}
+ */
+export const showSendEmail = users => {
+    if (!users.length) {
+        // Nothing to do.
+        return Promise.resolve();
+    }
+
+    let titlePromise;
+    if (users.length === 1) {
+        titlePromise = Str.get_string('sendbulkemailsingle', 'core_message');
+    } else {
+        titlePromise = Str.get_string('sendbulkemail', 'core_message', users.length);
+    }
+
+    const params = {jsonformdata: JSON.stringify('embedded=1')};
+    const body = Fragment.loadFragment('core_user', 'send_email_form', 1, params);
+
+    return ModalFactory.create({
+        type: ModalFactory.types.SAVE_CANCEL,
+        body: body,
+        title: titlePromise,
+        buttons: {
+            save: titlePromise,
+        },
+        removeOnClose: true,
+        large: true,
+    })
+    .then(modal => {
+        modal.getRoot().on(ModalEvents.save, () => {
+            submitSendEmail(modal, users);
+        });
+
+        modal.show();
+
+        return modal;
+    });
+};
+
+/**
+ * Send a message to these users.
+ *
+ * @param {Modal} modal
+ * @param {Number[]} receivers
+ * @return {Promise}
+ */
+const submitSendEmail = (modal, receivers) => {
+    const subject = modal.getRoot().find('input[name="subject"]').val();
+    const carboncopy = modal.getRoot().find('input[name="carboncopy"]:checked').val() ? true : false;
+    const text = modal.getRoot().find('form textarea').val();
+
+    const messages = {
+        subject,
+        carboncopy,
+        text,
+        receivers,
+    };
+
+    return Repository.sendEmailsToUsers([messages])
+    .then(messageIds => {
+        if (messageIds.length == 1) {
+            return Str.get_string('sendbulkemailsentsingle', 'core_message');
+        } else {
+            return Str.get_string('sendbulkemailsent', 'core_message', messageIds.length);
         }
     })
     .then(msg => notifyUser(msg))

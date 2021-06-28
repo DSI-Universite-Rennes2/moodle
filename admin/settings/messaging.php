@@ -75,4 +75,9 @@ if ($hassiteconfig) {
         /** @var \core\plugininfo\message $plugin */
         $plugin->load_settings($ADMIN, 'messaging', $hassiteconfig);
     }
+
+    $temp->add(new admin_setting_configcheckbox('emailbulkmessaging',
+        new lang_string('emailbulkmessaging', 'admin'),
+        new lang_string('configemailbulkmessaging', 'admin'),
+        0));
 }

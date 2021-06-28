@@ -286,6 +286,124 @@ class core_message_external extends external_api {
     }
 
     /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function send_instant_emails_parameters() {
+        return new external_function_parameters(
+            array(
+                'messages' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'subject' => new external_value(PARAM_RAW, 'the subject of the email'),
+                            'carboncopy' => new external_value(PARAM_BOOL,
+                                    'Send a copy of the email to sender', VALUE_DEFAULT, true),
+                            'text' => new external_value(PARAM_RAW, 'the text of the email'),
+                            'receivers' => new external_multiple_structure(
+                                    new external_value(PARAM_INT, 'id of the user to send the private email')
+                            ),
+                        )
+                    )
+                ),
+            )
+        );
+    }
+
+    /**
+     * Send private emails from the current user to other users.
+     *
+     * @param array $messages An array of message to send.
+     * @return array
+     */
+    public static function send_instant_emails($messages = array()) {
+        global $CFG, $USER, $DB;
+
+        // Check if emailbulkmessaging is enabled.
+        if (empty($CFG->emailbulkmessaging)) {
+            throw new moodle_exception('emailbulkmessagingdisabled', 'message');
+        }
+
+        // Ensure the current user is allowed to run this function.
+        $context = context_system::instance();
+        self::validate_context($context);
+        require_capability('moodle/site:sendmessage', $context);
+
+        $params = self::validate_parameters(self::send_instant_emails_parameters(), array('messages' => $messages));
+
+        $resultmessages = array();
+        foreach ($params['messages'] as $message) {
+            // Set email data.
+            $subject = $message['subject'];
+            $text = $message['text'];
+
+            // Retrieve all tousers of the messages.
+            $receivers = $message['receivers'];
+
+            // Handle carbon copy and prevent to send email twice if current user is already in receivers list.
+            if ($message['carboncopy'] && !in_array($USER->id, $receivers)) {
+                fwrite($log, 'carboncopy is true!');
+                $receivers[] = $USER->id;
+            }
+
+            list($sqluserids, $sqlparams) = $DB->get_in_or_equal($receivers, SQL_PARAMS_NAMED, 'userid_');
+            $tousers = $DB->get_records_select("user", "id " . $sqluserids . " AND deleted = 0", $sqlparams);
+
+            foreach ($receivers as $receiver) {
+                $resultmsg = array(); // The info about the success of the operation.
+
+                // We are going to do some checking.
+                // Code should match /messages/index.php checks.
+                $success = true;
+
+                // Check the user exists.
+                if (empty($tousers[$receiver])) {
+                    $success = false;
+                    $errormessage = get_string('touserdoesntexist', 'message', $receiver);
+                }
+
+                // Now we can send the message (at least try).
+                if ($success) {
+                    $success = email_to_user($tousers[$receiver], $USER, $subject, $text);
+                }
+
+                // Build the resultmsg.
+                if ($success) {
+                    $resultmsg['msgid'] = $success;
+                } else {
+                    // WARNINGS: for backward compatibility we return this errormessage.
+                    // We should have thrown exceptions as these errors prevent results to be returned.
+                    // See http://docs.moodle.org/dev/Errors_handling_in_web_services#When_to_send_a_warning_on_the_server_side .
+                    $resultmsg['msgid'] = -1;
+                    $resultmsg['errormessage'] = $errormessage;
+                }
+
+                $resultmessages[] = $resultmsg;
+            }
+        }
+
+        return $resultmessages;
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     * @since Moodle 3.8
+     */
+    public static function send_instant_emails_returns() {
+        return new external_multiple_structure(
+            new external_single_structure(
+                array(
+                    'msgid' => new external_value(PARAM_INT,
+                            'test this to know if it succeeds:  id of the created message if it succeeded, -1 when failed'),
+                    'errormessage' => new external_value(PARAM_TEXT, 'error message - if it failed', VALUE_OPTIONAL)
+                )
+            )
+        );
+    }
+
+    /**
      * Delete contacts parameters description.
      *
      * @return external_function_parameters

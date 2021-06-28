@@ -56,6 +56,11 @@ class user_bulk_action_form extends moodleform {
                 new moodle_url('/admin/user/user_bulk_message.php'),
                 get_string('messageselectadd'));
         }
+        if (has_capability('moodle/site:readallmessages', $syscontext) && !empty($CFG->emailbulkmessaging)) {
+            $actions['email'] = new action_link(
+                new moodle_url('/admin/user/user_bulk_email.php'),
+                get_string('emailselectadd', 'message'));
+        }
         if (has_capability('moodle/user:delete', $syscontext)) {
             $actions['delete'] = new action_link(
                 new moodle_url('/admin/user/user_bulk_delete.php'),

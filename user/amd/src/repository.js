@@ -67,3 +67,10 @@ export const sendMessagesToUsers = messages => {
         args: {messages}
     }])[0];
 };
+
+export const sendEmailsToUsers = messages => {
+    return fetchMany([{
+        methodname: 'core_message_send_instant_emails',
+        args: {messages}
+    }])[0];
+};
