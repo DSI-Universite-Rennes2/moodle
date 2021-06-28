@@ -31,7 +31,7 @@ Feature: Bulk emails
     And I set the following fields to these values:
       | Subject | Hi           |
       | Message | Hello world! |
-    When I press "Send email to 3 people"
+    When I click on "Send" "button" in the ".modal-footer" "css_element"
     Then I should see "Email sent to 3 people"
 
   Scenario: Send an email to students from participants list with carbon copy
@@ -45,5 +45,5 @@ Feature: Bulk emails
       | Subject | Hi           |
       | Message | Hello world! |
     And I click on "Carbon copy" "checkbox"
-    When I press "Send email to 3 people"
+    When I click on "Send" "button" in the ".modal-footer" "css_element"
     Then I should see "Email sent to 4 people"

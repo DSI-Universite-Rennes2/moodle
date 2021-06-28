@@ -23,9 +23,9 @@
 
 import * as Repository from 'core_user/repository';
 import * as Str from 'core/str';
-import Fragment from 'core/fragment';
 import ModalEvents from 'core/modal_events';
 import ModalFactory from 'core/modal_factory';
+import ModalForm from 'core_form/modalform';
 import Notification from 'core/notification';
 import Templates from 'core/templates';
 import {add as notifyUser} from 'core/toast';
@@ -201,72 +201,65 @@ const submitSendMessage = (modal, users, text) => {
  * Show the send email popup.
  *
  * @param {Number[]} users
- * @return {Promise}
+ * @param {Number} contextId
+ * @return {void}
  */
-export const showSendEmail = users => {
+export const showSendEmail = (users, contextId) => {
     if (!users.length) {
         // Nothing to do.
-        return Promise.resolve();
+        return;
     }
 
-    let titlePromise;
-    if (users.length === 1) {
-        titlePromise = Str.get_string('sendbulkemailsingle', 'core_message');
+    let title;
+    if (users.length == 1) {
+        title = Str.get_string('sendbulkemailsingle', 'core_message');
     } else {
-        titlePromise = Str.get_string('sendbulkemail', 'core_message', users.length);
+        title = Str.get_string('sendbulkemail', 'core_message', users.length);
     }
 
-    const params = {jsonformdata: JSON.stringify('embedded=1')};
-    const body = Fragment.loadFragment('core_user', 'send_email_form', 1, params);
-
-    return ModalFactory.create({
-        type: ModalFactory.types.SAVE_CANCEL,
-        body: body,
-        title: titlePromise,
-        buttons: {
-            save: titlePromise,
-        },
-        removeOnClose: true,
-        large: true,
-    })
-    .then(modal => {
-        modal.getRoot().on(ModalEvents.save, () => {
-            submitSendEmail(modal, users);
-        });
-
-        modal.show();
-
-        return modal;
+    const modalForm = new ModalForm({
+        formClass: "core_user\\form\\send_email_form",
+        args: {users: users, contextid: contextId},
+        modalConfig: {title: title, large: true, buttons: {save: Str.get_string('send', 'message')}},
     });
-};
 
-/**
- * Send a message to these users.
- *
- * @param {Modal} modal
- * @param {Number[]} receivers
- * @return {Promise}
- */
-const submitSendEmail = (modal, receivers) => {
-    const subject = modal.getRoot().find('input[name="subject"]').val();
-    const carboncopy = modal.getRoot().find('input[name="carboncopy"]:checked').val() ? true : false;
-    const text = modal.getRoot().find('form textarea').val();
+    modalForm.addEventListener(modalForm.events.FORM_SUBMITTED, (e) => {
+        let countnotifications = 0;
+        let errors = [];
+        let i = 0;
 
-    const messages = {
-        subject,
-        carboncopy,
-        text,
-        receivers,
-    };
-
-    return Repository.sendEmailsToUsers([messages])
-    .then(messageIds => {
-        if (messageIds.length == 1) {
-            return Str.get_string('sendbulkemailsentsingle', 'core_message');
-        } else {
-            return Str.get_string('sendbulkemailsent', 'core_message', messageIds.length);
+        let message;
+        for (i = 0; i < e.detail.length; i++) {
+            message = e.detail[i];
+            if (message.msgid) {
+                countnotifications++;
+            } else {
+                errors.push(message.errormessage);
+            }
         }
-    })
-    .then(msg => notifyUser(msg))
-    .catch(Notification.exception);
+
+        if (countnotifications > 0) {
+            if (countnotifications == 1) {
+                Str.get_string('sendbulkemailsentsingle', 'core_message')
+                    .then(message => {
+                        return notifyUser(message);
+                    })
+                    .fail(Notification.exception);
+            } else {
+                Str.get_string('sendbulkemailsent', 'core_message', countnotifications)
+                    .then(message => {
+                        return notifyUser(message);
+                    })
+                    .fail(Notification.exception);
+            }
+        }
+
+        if (errors.length > 0) {
+            for (i = 0; i < errors.length; i++) {
+                notifyUser(errors[i]);
+            }
+        }
+    });
+
+    modalForm.show();
 };

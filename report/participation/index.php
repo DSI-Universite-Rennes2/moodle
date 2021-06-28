@@ -154,7 +154,7 @@ if (!empty($instanceid) && !empty($roleid)) {
 
     $actionheader = !empty($action) ? get_string($action) : get_string('allactions');
 
-    if (empty($CFG->messaging)) {
+    if (empty($CFG->messaging) && empty($CFG->emailbulkmessaging)) {
         $table->define_columns(array('fullname', 'count'));
         $table->define_headers(array(get_string('user'), $actionheader));
     } else {
@@ -318,10 +318,12 @@ if (!empty($instanceid) && !empty($roleid)) {
 
     echo '<h2>'.get_string('counteditems', '', $a).'</h2>'."\n";
 
-    if (!empty($CFG->messaging)) {
+    if (!empty($CFG->messaging) || !empty($CFG->emailbulkmessaging)) {
+        $context = context_course::instance($id, MUST_EXIST);
         echo '<form action="'.$CFG->wwwroot.'/user/action_redir.php" method="post" id="participantsform">'."\n";
         echo '<div>'."\n";
         echo '<input type="hidden" name="id" value="'.$id.'" />'."\n";
+        echo '<input type="hidden" name="contextid" value="'.$context->id.'" />'."\n";
         echo '<input type="hidden" name="returnto" value="'. s($PAGE->url) .'" />'."\n";
         echo '<input type="hidden" name="sesskey" value="'.sesskey().'" />'."\n";
     }
@@ -332,7 +334,7 @@ if (!empty($instanceid) && !empty($roleid)) {
             fullname($u, true));
         $data[] = !empty($u->count) ? get_string('yes').' ('.$u->count.') ' : get_string('no');
 
-        if (!empty($CFG->messaging)) {
+        if (!empty($CFG->messaging) || !empty($CFG->emailbulkmessaging)) {
             $togglegroup = 'participants-table';
             if (empty($u->count)) {
                 $togglegroup .= ' no';
@@ -396,7 +398,6 @@ if (!empty($instanceid) && !empty($roleid)) {
 
         $options = new stdClass();
         $options->courseid = $course->id;
-        $options->contextid = $context->id;
         $options->noteStateNames = note_get_state_names();
         $options->stateHelpIcon = $OUTPUT->help_icon('publishstate', 'notes');
         $PAGE->requires->js_call_amd('report_participation/participants', 'init', [$options]);

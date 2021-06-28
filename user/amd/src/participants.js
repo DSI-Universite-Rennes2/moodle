@@ -35,6 +35,7 @@ import {showAddNote, showSendMessage, showSendEmail} from 'core_user/local/parti
 
 const Selectors = {
     bulkActionSelect: "#formactionid",
+    bulkUserContextId: "input[name='contextid'][type='hidden']",
     bulkUserSelectedCheckBoxes: "input[data-togglegroup='participants-table'][data-toggle='slave']:checked",
     checkCountButton: "#checkall",
     showCountText: '[data-region="participant-count"]',
@@ -84,7 +85,8 @@ export const init = ({
                         root.querySelector(Selectors.stateHelpIcon)
                     );
                 } else if (action == '#emailselect') {
-                    bulkAction = showSendEmail(ids);
+                    const contextId = root.querySelector(Selectors.bulkUserContextId).value;
+                    bulkAction = showSendEmail(ids, contextId);
                 }
 
                 if (bulkAction) {

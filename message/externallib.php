@@ -342,7 +342,6 @@ class core_message_external extends external_api {
 
             // Handle carbon copy and prevent to send email twice if current user is already in receivers list.
             if ($message['carboncopy'] && !in_array($USER->id, $receivers)) {
-                fwrite($log, 'carboncopy is true!');
                 $receivers[] = $USER->id;
             }
 

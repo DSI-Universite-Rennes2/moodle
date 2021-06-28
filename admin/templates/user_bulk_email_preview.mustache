@@ -15,29 +15,30 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template core_user/send_bulk_email
+    @template core_admin/user_bulk_email_preview
 
-    Template for the send bulk email modal.
+    Template to display preview for user bulk email form.
 
     Context variables required for this template:
-      None
+    * subject: subject of the email
+    * carboncopy: yes or no string
+    * message: html content of the email
 
     Example context (json):
     {
+        "subject": "Subject for a new email",
+        "carboncopy": "Yes",
+        "message": "This is a new email for selected users."
     }
 }}
-<form>
-<p>
-<label for="bulk-email">
-<span class="sr-only">{{#str}}email, core_message{{/str}}</span>
-</label>
-<input type="text" id="subject" name="name" />
-
-<textarea id="bulk-email" rows="3" data-max-rows="10" data-auto-rows="true" cols="30" class="form-control"></textarea>
-</p>
-</form>
-{{#js}}
-require(['core/auto_rows'], function(AutoRows) {
-    AutoRows.init(document.getElementById('bulk-email'));
-});
-{{/js}}
+<div class="card card-body bg-light">
+    <h3>{{#str}} preview {{/str}}</h3>
+    <dl>
+        <dt>{{#str}} subject, message {{/str}}</dt>
+        <dd>{{ subject }}</dd>
+        <dt>{{#str}} carboncopy, message {{/str}}</dt>
+        <dd>{{ carboncopy }}</dd>
+        <dt>{{#str}} message, message {{/str}}</dt>
+        <dd>{{{ message }}}</dd>
+    </dl>
+</div>

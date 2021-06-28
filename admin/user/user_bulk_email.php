@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
  * Page for bulk user mailing.
  *
@@ -23,9 +22,10 @@
  * @package   core_user
  */
 
+use core_user\form\send_email_form;
+
 require('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
-require_once($CFG->dirroot.'/user/send_email_form.php');
 
 $subject    = optional_param('subject', '', PARAM_RAW);
 $carboncopy = optional_param('carboncopy', false, PARAM_BOOL);
@@ -63,7 +63,8 @@ if ($confirm and !empty($subject) and !empty($text) and confirm_sesskey()) {
     redirect($return, $message, 0, \core\output\notification::NOTIFY_SUCCESS);
 }
 
-$mform = new send_email_form();
+$customdata = array('submitlabel' => get_string('preview', 'moodle'));
+$mform = new send_email_form(null, $customdata);
 
 if ($mform->is_cancelled()) {
     redirect($return);
@@ -77,25 +78,20 @@ if ($mform->is_cancelled()) {
     $carboncopy = isset($formdata->carboncopy);
     $text = format_text($formdata->message['text'], $formdata->message['format'], $options);
 
-    $preview = html_writer::start_tag('dl');
-    $preview .= html_writer::tag('dt', get_string('subject', 'message'));
-    $preview .= html_writer::tag('dd', $formdata->subject);
-    $preview .= html_writer::tag('dt', get_string('carboncopy', 'message'));
     if ($carboncopy) {
-        $preview .= html_writer::tag('dd', get_string('yes'));
+        $strcarboncopy = get_string('yes');
     } else {
-        $preview .= html_writer::tag('dd', get_string('no'));
+        $strcarboncopy = get_string('no');
     }
-    $preview .= html_writer::tag('dt', get_string('message', 'message'));
-    $preview .= html_writer::tag('dd', $text);
-    $preview .= html_writer::end_tag('dl');
 
     list($in, $params) = $DB->get_in_or_equal($SESSION->bulk_users);
     $userlist = $DB->get_records_select_menu('user', "id $in", $params, 'fullname', 'id,'.$DB->sql_fullname().' AS fullname');
     $usernames = implode(', ', $userlist);
     echo $OUTPUT->header();
     echo $OUTPUT->heading(get_string('confirmation', 'admin'));
-    echo $OUTPUT->box($preview, 'boxwidthnarrow boxaligncenter generalbox', 'preview');
+
+    $templatevariables = (object) ['subject' => $formdata->subject, 'carboncopy' => $strcarboncopy, 'message' => $text];
+    echo $OUTPUT->render_from_template('core_admin/user_bulk_email_preview', $templatevariables);
 
     $post = array('confirm' => 1, 'subject' => $formdata->subject, 'carboncopy' => $carboncopy, 'text' => $text);
     $formcontinue = new single_button(new moodle_url('user_bulk_email.php', $post), get_string('yes'));
@@ -105,6 +101,14 @@ if ($mform->is_cancelled()) {
     die;
 }
 
+$countmessages = count($SESSION->bulk_users);
+if ($countmessages < 2) {
+    $heading = get_string('sendbulkemailsingle', 'message');
+} else {
+    $heading = get_string('sendbulkemail', 'message', $countmessages);
+}
+
 echo $OUTPUT->header();
+echo $OUTPUT->heading($heading);
 $mform->display();
 echo $OUTPUT->footer();

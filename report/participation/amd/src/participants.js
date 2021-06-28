@@ -30,6 +30,7 @@ import {showSendMessage, showSendEmail} from 'core_user/local/participants/bulka
 
 const Selectors = {
     bulkActionSelect: "#formactionid",
+    bulkUserContextId: "input[name='contextid'][type='hidden']",
     bulkUserSelectedCheckBoxes: "input[data-togglegroup^='participants-table'][data-toggle='slave']:checked",
     participantsForm: '#participantsform',
 };
@@ -71,7 +72,8 @@ export const init = () => {
                     })
                     .catch(Notification.exception);
                 } else if (action === '#emailselect') {
-                    showSendEmail(ids)
+                    const contextId = root.querySelector(Selectors.bulkUserContextId).value;
+                    showSendEmail(ids, contextId)
                     .then(modal => {
                         modal.getRoot().on(ModalEvents.hidden, () => {
                             // Focus on the action select when the dialog is closed.
