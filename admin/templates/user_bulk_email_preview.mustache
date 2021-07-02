@@ -1,0 +1,44 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template core_admin/user_bulk_email_preview
+
+    Template to display preview for user bulk email form.
+
+    Context variables required for this template:
+    * subject: subject of the email
+    * carboncopy: yes or no string
+    * message: html content of the email
+
+    Example context (json):
+    {
+        "subject": "Subject for a new email",
+        "carboncopy": "Yes",
+        "message": "This is a new email for selected users."
+    }
+}}
+<div class="card card-body bg-light">
+    <h3>{{#str}} preview {{/str}}</h3>
+    <dl>
+        <dt>{{#str}} subject, message {{/str}}</dt>
+        <dd>{{ subject }}</dd>
+        <dt>{{#str}} carboncopy, message {{/str}}</dt>
+        <dd>{{ carboncopy }}</dd>
+        <dt>{{#str}} message, message {{/str}}</dt>
+        <dd>{{{ message }}}</dd>
+    </dl>
+</div>

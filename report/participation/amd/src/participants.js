@@ -26,10 +26,11 @@ import jQuery from 'jquery';
 import CustomEvents from 'core/custom_interaction_events';
 import ModalEvents from 'core/modal_events';
 import Notification from 'core/notification';
-import {showSendMessage} from 'core_user/local/participants/bulkactions';
+import {showSendMessage, showSendEmail} from 'core_user/local/participants/bulkactions';
 
 const Selectors = {
     bulkActionSelect: "#formactionid",
+    bulkUserContextId: "input[name='contextid'][type='hidden']",
     bulkUserSelectedCheckBoxes: "input[data-togglegroup^='participants-table'][data-toggle='slave']:checked",
     participantsForm: '#participantsform',
 };
@@ -59,6 +60,20 @@ export const init = () => {
 
                 if (action === '#messageselect') {
                     showSendMessage(ids)
+                    .then(modal => {
+                        modal.getRoot().on(ModalEvents.hidden, () => {
+                            // Focus on the action select when the dialog is closed.
+                            const bulkActionSelector = root.querySelector(Selectors.bulkActionSelect);
+                            resetBulkAction(bulkActionSelector);
+                            bulkActionSelector.focus();
+                        });
+
+                        return modal;
+                    })
+                    .catch(Notification.exception);
+                } else if (action === '#emailselect') {
+                    const contextId = root.querySelector(Selectors.bulkUserContextId).value;
+                    showSendEmail(ids, contextId)
                     .then(modal => {
                         modal.getRoot().on(ModalEvents.hidden, () => {
                             // Focus on the action select when the dialog is closed.

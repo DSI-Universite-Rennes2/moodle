@@ -224,9 +224,15 @@ if ($bulkoperations) {
         ]);
     }
     echo html_writer::end_tag('div');
+
+    $hasbulkmessagingcapability = has_all_capabilities(['moodle/site:sendmessage', 'moodle/course:bulkmessaging'], $context);
+
     $displaylist = array();
-    if (!empty($CFG->messaging) && has_all_capabilities(['moodle/site:sendmessage', 'moodle/course:bulkmessaging'], $context)) {
+    if (!empty($CFG->messaging) && $hasbulkmessagingcapability) {
         $displaylist['#messageselect'] = get_string('messageselectadd');
+    }
+    if (!empty($CFG->emailbulkmessaging) && $hasbulkmessagingcapability) {
+        $displaylist['#emailselect'] = get_string('emailselectadd', 'message');
     }
     if (!empty($CFG->enablenotes) && has_capability('moodle/notes:manage', $context) && $context->id != $frontpagectx->id) {
         $displaylist['#addgroupnote'] = get_string('addnewnote', 'notes');
@@ -286,6 +292,8 @@ if ($bulkoperations) {
     echo html_writer::tag('div', $label . $select);
 
     echo '<input type="hidden" name="id" value="' . $course->id . '" />';
+    $context = context_course::instance($course->id, MUST_EXIST);
+    echo '<input type="hidden" name="contextid" value="' . $context->id . '" />';
     echo '<div class="d-none" data-region="state-help-icon">' . $OUTPUT->help_icon('publishstate', 'notes') . '</div>';
     echo '</div></div></div>';
 

@@ -25,6 +25,7 @@ import * as Repository from 'core_user/repository';
 import * as Str from 'core/str';
 import ModalEvents from 'core/modal_events';
 import ModalFactory from 'core/modal_factory';
+import ModalForm from 'core_form/modalform';
 import Notification from 'core/notification';
 import Templates from 'core/templates';
 import {add as notifyUser} from 'core/toast';
@@ -194,4 +195,71 @@ const submitSendMessage = (modal, users, text) => {
     })
     .then(msg => notifyUser(msg))
     .catch(Notification.exception);
+};
+
+/**
+ * Show the send email popup.
+ *
+ * @param {Number[]} users
+ * @param {Number} contextId
+ * @return {void}
+ */
+export const showSendEmail = (users, contextId) => {
+    if (!users.length) {
+        // Nothing to do.
+        return;
+    }
+
+    let title;
+    if (users.length == 1) {
+        title = Str.get_string('sendbulkemailsingle', 'core_message');
+    } else {
+        title = Str.get_string('sendbulkemail', 'core_message', users.length);
+    }
+
+    const modalForm = new ModalForm({
+        formClass: "core_user\\form\\send_email_form",
+        args: {users: users, contextid: contextId},
+        modalConfig: {title: title, large: true, buttons: {save: Str.get_string('send', 'message')}},
+    });
+
+    modalForm.addEventListener(modalForm.events.FORM_SUBMITTED, (e) => {
+        let countnotifications = 0;
+        let errors = [];
+        let i = 0;
+
+        let message;
+        for (i = 0; i < e.detail.length; i++) {
+            message = e.detail[i];
+            if (message.msgid) {
+                countnotifications++;
+            } else {
+                errors.push(message.errormessage);
+            }
+        }
+
+        if (countnotifications > 0) {
+            if (countnotifications == 1) {
+                Str.get_string('sendbulkemailsentsingle', 'core_message')
+                    .then(message => {
+                        return notifyUser(message);
+                    })
+                    .fail(Notification.exception);
+            } else {
+                Str.get_string('sendbulkemailsent', 'core_message', countnotifications)
+                    .then(message => {
+                        return notifyUser(message);
+                    })
+                    .fail(Notification.exception);
+            }
+        }
+
+        if (errors.length > 0) {
+            for (i = 0; i < errors.length; i++) {
+                notifyUser(errors[i]);
+            }
+        }
+    });
+
+    modalForm.show();
 };
