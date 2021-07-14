@@ -144,13 +144,19 @@ class base_setting_ui {
      * Sets the label.
      *
      * @throws base_setting_ui_exception when the label is not valid.
-     * @param string $label
+     *
+     * @param string  $label
+     * @param boolean $striptags If true HTML tags from $label will be removed. See also $CFG->formatstringstriptags.
+     *
+     * @return void
      */
-    public function set_label($label) {
+    public function set_label($label, $striptags = true) {
         $label = (string)$label;
-        if ($label === '' || $label !== clean_param($label, PARAM_TEXT)) {
-            throw new base_setting_ui_exception('setting_invalid_ui_label');
+
+        if (!empty($striptags)) {
+            $label = clean_param($label, PARAM_TEXT);
         }
+
         $this->label = $label;
     }
 

@@ -150,6 +150,7 @@ class restore_section_task extends restore_task {
      * Define the common setting that any restore section will have
      */
     protected function define_settings() {
+        global $CFG;
 
         // All the settings related to this activity will include this prefix
         $settingprefix = 'section_' . $this->info->sectionid . '_';
@@ -167,7 +168,7 @@ class restore_section_task extends restore_task {
         } else {
             $label = $this->info->title;
         }
-        $section_included->get_ui()->set_label($label);
+        $section_included->get_ui()->set_label($label, boolval($CFG->formatstringstriptags));
         $this->add_setting($section_included);
 
         // Define section_userinfo. Dependent of:
