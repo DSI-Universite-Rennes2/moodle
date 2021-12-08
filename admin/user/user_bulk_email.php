@@ -1,0 +1,117 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Page for bulk user mailing.
+ *
+ * @copyright 2021 Université Rennes 2 {@link https://www.univ-rennes2.fr}
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   core_user
+ */
+
+use core_message\external\email;
+use core_user\form\send_email_form;
+
+require('../../config.php');
+require_once($CFG->libdir.'/adminlib.php');
+
+$subject    = optional_param('subject', '', PARAM_RAW);
+$carboncopy = optional_param('carboncopy', false, PARAM_BOOL);
+$text       = optional_param('text', '', PARAM_RAW);
+$confirm    = optional_param('confirm', 0, PARAM_BOOL);
+
+admin_externalpage_setup('userbulk');
+require_capability('moodle/site:manageallmessaging', context_system::instance());
+
+$return = $CFG->wwwroot.'/'.$CFG->admin.'/user/user_bulk.php';
+
+if (empty($SESSION->bulk_users)) {
+    redirect($return);
+}
+
+if ($confirm and !empty($subject) and !empty($text) and confirm_sesskey()) {
+    require_once($CFG->dirroot . '/message/externallib.php');
+
+    $message = array();
+    $message['subject'] = $subject;
+    $message['carboncopy'] = $carboncopy;
+    $message['text'] = $text;
+    $message['receivers'] = array_values($SESSION->bulk_users);
+    $messages = array($message);
+
+    $result = email::send_instant_emails($messages);
+
+    $countmessages = count($result);
+    if ($countmessages < 2) {
+        $message = get_string('sendbulkemailsentsingle', 'message');
+    } else {
+        $message = get_string('sendbulkemailsent', 'message', $countmessages);
+    }
+
+    redirect($return, $message, 0, \core\output\notification::NOTIFY_SUCCESS);
+}
+
+$customdata = array('submitlabel' => get_string('preview', 'moodle'));
+$mform = new send_email_form(null, $customdata);
+
+if ($mform->is_cancelled()) {
+    redirect($return);
+} else if ($formdata = $mform->get_data()) {
+    $options = new stdClass();
+    $options->para     = false;
+    $options->newlines = true;
+    $options->smiley   = false;
+    $options->trusted = trusttext_trusted(\context_system::instance());
+
+    $carboncopy = isset($formdata->carboncopy);
+    $text = format_text($formdata->message['text'], $formdata->message['format'], $options);
+
+    if ($carboncopy) {
+        $strcarboncopy = get_string('yes');
+    } else {
+        $strcarboncopy = get_string('no');
+    }
+
+    list($in, $params) = $DB->get_in_or_equal($SESSION->bulk_users);
+    $select = sprintf('id %s', $in);
+    $fields = sprintf('id, %s AS fullname', $DB->sql_fullname());
+    $userlist = $DB->get_records_select_menu('user', $select, $params, 'fullname', $fields);
+    $usernames = implode(', ', $userlist);
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading(get_string('confirmation', 'admin'));
+
+    $templatevariables = (object) ['subject' => $formdata->subject, 'carboncopy' => $strcarboncopy, 'message' => $text];
+    echo $OUTPUT->render_from_template('core_admin/user_bulk_email_preview', $templatevariables);
+
+    $post = array('confirm' => 1, 'subject' => $formdata->subject, 'carboncopy' => $carboncopy, 'text' => $text);
+    $formcontinue = new single_button(new moodle_url('user_bulk_email.php', $post), get_string('yes'));
+    $formcancel = new single_button(new moodle_url('user_bulk.php'), get_string('no'), 'get');
+    echo $OUTPUT->confirm(get_string('confirmemail', 'bulkusers', $usernames), $formcontinue, $formcancel);
+    echo $OUTPUT->footer();
+    die;
+}
+
+$countmessages = count($SESSION->bulk_users);
+if ($countmessages < 2) {
+    $heading = get_string('sendbulkemailsingle', 'message');
+} else {
+    $heading = get_string('sendbulkemail', 'message', $countmessages);
+}
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading($heading);
+$mform->display();
+echo $OUTPUT->footer();

@@ -30,6 +30,18 @@ if ($hassiteconfig) {
         empty($CFG->messaging)
     );
 
+    $temp->add(new admin_setting_heading('email_heading', new lang_string('emailbulkmessaging', 'admin'), '', ''));
+    $temp->add(new admin_setting_configcheckbox('emailbulkmessaging',
+        new lang_string('emailbulkmessaging', 'admin'),
+        new lang_string('configemailbulkmessaging', 'admin'),
+        0));
+
+    $temp->add(new admin_setting_heading('messaging_heading', new lang_string('messaging', 'admin'), '', ''));
+    $temp->add(new admin_setting_configcheckbox('messaging',
+        new lang_string('messaging', 'admin'),
+        new lang_string('configmessaging', 'admin'),
+        1));
+
     $temp->add(new admin_setting_configcheckbox('messagingallusers',
             new lang_string('messagingallusers', 'admin'),
             new lang_string('configmessagingallusers', 'admin'),

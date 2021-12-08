@@ -31,11 +31,12 @@ import ModalEvents from 'core/modal_events';
 import Notification from 'core/notification';
 import Pending from 'core/pending';
 import jQuery from 'jquery';
-import {showAddNote, showSendMessage} from 'core_user/local/participants/bulkactions';
+import {showAddNote, showSendMessage, showSendEmail} from 'core_user/local/participants/bulkactions';
 import 'core/inplace_editable';
 
 const Selectors = {
     bulkActionSelect: "#formactionid",
+    bulkUserContextId: "input[name='contextid'][type='hidden']",
     bulkUserSelectedCheckBoxes: "input[data-togglegroup='participants-table'][data-toggle='slave']:checked",
     checkCountButton: "#checkall",
     showCountText: '[data-region="participant-count"]',
@@ -84,6 +85,9 @@ export const init = ({
                         noteStateNames,
                         root.querySelector(Selectors.stateHelpIcon)
                     );
+                } else if (action == '#emailselect') {
+                    const contextId = root.querySelector(Selectors.bulkUserContextId).value;
+                    bulkAction = showSendEmail(ids, contextId);
                 }
 
                 if (bulkAction) {

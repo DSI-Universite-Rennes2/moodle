@@ -152,7 +152,8 @@ if (!empty($instanceid) && !empty($roleid)) {
 
     $actionheader = !empty($action) ? get_string($action) : get_string('allactions');
 
-    if (empty($CFG->messaging)) {
+    $isbulkmessagingenabled = !(empty($CFG->messaging) && empty($CFG->emailbulkmessaging));
+    if ($isbulkmessagingenabled) {
         $table->define_columns(array('fullname', 'count'));
         $table->define_headers(array(get_string('user'), $actionheader));
     } else {
@@ -316,10 +317,12 @@ if (!empty($instanceid) && !empty($roleid)) {
 
     echo '<h2>'.get_string('counteditems', '', $a).'</h2>'."\n";
 
-    if (!empty($CFG->messaging)) {
+    if ($isbulkmessagingenabled) {
+        $context = context_course::instance($id, MUST_EXIST);
         echo '<form action="'.$CFG->wwwroot.'/user/action_redir.php" method="post" id="participantsform">'."\n";
         echo '<div>'."\n";
         echo '<input type="hidden" name="id" value="'.$id.'" />'."\n";
+        echo '<input type="hidden" name="contextid" value="'.$context->id.'" />'."\n";
         echo '<input type="hidden" name="returnto" value="'. s($PAGE->url) .'" />'."\n";
         echo '<input type="hidden" name="sesskey" value="'.sesskey().'" />'."\n";
     }
@@ -330,7 +333,7 @@ if (!empty($instanceid) && !empty($roleid)) {
             fullname($u, true));
         $data[] = !empty($u->count) ? get_string('yes').' ('.$u->count.') ' : get_string('no');
 
-        if (!empty($CFG->messaging)) {
+        if ($isbulkmessagingenabled) {
             $togglegroup = 'participants-table';
             if (empty($u->count)) {
                 $togglegroup .= ' no';
@@ -359,7 +362,7 @@ if (!empty($instanceid) && !empty($roleid)) {
         echo html_writer::end_div();
     }
 
-    if (!empty($CFG->messaging)) {
+    if ($isbulkmessagingenabled) {
         echo '<div class="selectbuttons btn-group">';
         if ($perpage >= $matchcount) {
             $checknos = new \core\output\checkbox_toggleall('participants-table no', true, [
@@ -374,7 +377,14 @@ if (!empty($instanceid) && !empty($roleid)) {
         echo '</div>';
         echo '<div class="py-3">';
         echo html_writer::label(get_string('withselectedusers'), 'formactionid');
-        $displaylist['#messageselect'] = get_string('messageselectadd');
+
+        $hasbulkmessagingcapability = has_capability('moodle/course:bulkmessaging', $context);
+        if (!empty($CFG->messaging) && $hasbulkmessagingcapability) {
+            $displaylist['#messageselect'] = get_string('messageselectadd');
+        }
+        if (!empty($CFG->emailbulkmessaging) && $hasbulkmessagingcapability) {
+            $displaylist['#emailselect'] = get_string('emailselectadd', 'message');
+        }
         $withselectedparams = array(
             'id' => 'formactionid',
             'data-action' => 'toggle',
