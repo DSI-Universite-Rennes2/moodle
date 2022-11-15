@@ -80,8 +80,8 @@ class phpunit_gradeimport_csv_load_data extends gradeimport_csv_load_data {
     /**
      * Method to open up the appropriate method for unit testing.
      */
-    public function test_update_grade_item($courseid, $map, $key, $verbosescales, $value) {
-        return $this->update_grade_item($courseid, $map, $key, $verbosescales, $value);
+    public function test_update_grade_item($courseid, $map, $key, $verbosescales, $value, $linenumber) {
+        return $this->update_grade_item($courseid, $map, $key, $verbosescales, $value, $linenumber);
     }
 
     /**
@@ -95,11 +95,11 @@ class phpunit_gradeimport_csv_load_data extends gradeimport_csv_load_data {
      * @return array grades to be updated.
      */
     public function test_map_user_data_with_value($mappingidentifier, $value, $header, $map, $key, $courseid, $feedbackgradeid,
-            $verbosescales) {
+            $verbosescales, $linenumber) {
         // Set an import code.
         $this->importcode = 00001;
         $this->map_user_data_with_value($mappingidentifier, $value, $header, $map, $key, $courseid, $feedbackgradeid,
-                $verbosescales);
+                $verbosescales, $linenumber);
 
         switch ($mappingidentifier) {
             case 'userid':
