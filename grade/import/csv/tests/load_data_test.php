@@ -398,7 +398,7 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
         $newgrades = $testobject->test_update_grade_item($this->courseid, $map, $key, $verbosescales, 'A', $linenumber);
         // The $newgrades variable should be null.
         $this->assertNull($newgrades);
-        $a = array('badgrade' => $value, 'linenumber' => $linenumber);
+        $a = array('badgrade' => 'A', 'linenumber' => $linenumber);
         $expectederrormessage = get_string('badgrade', 'gradeimport_csv', $a);
         // Check that the error message is what we expect.
         $gradebookerrors = $testobject->get_gradebookerrors();
