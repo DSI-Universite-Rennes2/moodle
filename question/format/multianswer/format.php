@@ -67,7 +67,7 @@ class qformat_multianswer extends qformat_default {
         $question = qtype_multianswer_extract_question($questiontext);
         $errors = qtype_multianswer_validate_question($question);
         if ($errors) {
-            $this->error(get_string('invalidmultianswerquestion', 'qtype_multianswer', implode(' ', $errors)));
+            $this->error(get_string('invalidmultianswerquestion', 'qtype_multianswer', implode(' ', $errors)), '', format_string($question->questiontext['text']));
             return array();
         }
 

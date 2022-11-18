@@ -1,0 +1,8 @@
+// question: 815  name: <script>console.log('There is no XSS vulnerability');</script>
+::<script>console.log('There is no XSS vulnerability');</script>::[html]Select all prime numbers \:<br>{
+	~%-50%<p dir\="ltr" style\="text-align\: left;">1<br></p>
+	~%33%<p dir\="ltr" style\="text-align\: left;">2<br></p>
+	~%33.33333%<p dir\="ltr" style\="text-align\: left;">3<br></p>
+	~%-50%<p dir\="ltr" style\="text-align\: left;">4<br></p>
+	~%33.33333%<p dir\="ltr" style\="text-align\: left;">5<br></p>
+}

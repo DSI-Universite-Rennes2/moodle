@@ -50,3 +50,10 @@ Feature: Test importing questions from GIFT format.
     And I upload "question/format/gift/tests/fixtures/questions_encoding_windows-1252.gift.txt" file to "Import" filemanager
     And I press "id_submitbutton"
     Then I should see "The file you selected does not use UTF-8 character encoding. GIFT format files must use UTF-8."
+
+  @javascript @_file_upload
+  Scenario: import some GIFT questions with invalid grade options
+    When I set the field "id_format_gift" to "1"
+    And I upload "question/format/gift/tests/fixtures/invalid_import.gift.txt" file to "Import" filemanager
+    And I press "id_submitbutton"
+    Then I should see "Grades (0.33) do not match grade options - question 'console.log('There is no XSS vulnerability');' skipped."

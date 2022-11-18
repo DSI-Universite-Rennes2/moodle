@@ -1,0 +1,1 @@
+<script>alert('There is no XSS vulnerability');</script> {1:MULTICHOICE:=OK#Correct}
