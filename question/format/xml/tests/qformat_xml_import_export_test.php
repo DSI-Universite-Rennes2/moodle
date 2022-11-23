@@ -237,6 +237,60 @@ class qformat_xml_import_export_test extends advanced_testcase {
     }
 
     /**
+     * TODO: Check for importing a category with a description.
+     */
+    public function test_import_invalid_questions() {
+        global $OUTPUT;
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course();
+        $this->setAdminUser();
+        $qformat = $this->create_qformat('error_invalid_questions.xml', $course);
+
+        ob_start();
+        $imported = $qformat->importprocess();
+        // $output = ob_get_flush();
+        $output = ob_get_clean();
+
+        ob_start();
+        $reflexion = new ReflectionClass('qformat_default');
+        $method = $reflexion->getMethod('error');
+        $method->setAccessible(true);
+        $method->invokeArgs($qformat, array(get_string('xmltypeunsupported', 'qformat_xml', $questiontype = '')));
+        $expectedoutput = ob_get_clean();
+        $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
+
+        $this->assertFalse($imported);
+        $this->assertEquals($expectedoutput, $output);
+    }
+
+    /**
+     * TODO: Simple check for importing a category with a description.
+     */
+    public function test_import_invalid_grades() {
+        global $OUTPUT;
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course();
+        $this->setAdminUser();
+        $qformat = $this->create_qformat('error_invalid_grades.xml', $course);
+
+        ob_start();
+        $imported = $qformat->importprocess();
+        $output = ob_get_clean();
+        // $output = ob_get_flush();
+        // $output = ob_get_contents();
+        // ob_end_clean();
+
+        $a = array('grades' => '0.33', 'question' => 'Question with invalid grades');
+        $expectedoutput = $OUTPUT->notification(get_string('invalidgrade', 'question', $a));
+        $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
+
+        $this->assertFalse($imported);
+        $this->assertEquals($expectedoutput, $output);
+    }
+
+    /**
      * Simple check for exporting a category.
      */
     public function test_export_category() {
