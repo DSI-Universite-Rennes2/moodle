@@ -2747,6 +2747,10 @@ function check_libcurl_version(environment_results $result) {
  * @return environment_results|null
  */
 function check_max_input_vars(environment_results $result) {
+    if (defined('CLI_SCRIPT') && CLI_SCRIPT) {
+        return null;
+    }
+
     $max = (int)ini_get('max_input_vars');
     if ($max < 5000) {
         $result->setInfo('max_input_vars');
