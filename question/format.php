@@ -371,9 +371,14 @@ class qformat_default {
         // check answer grades are valid
         // (now need to do this here because of 'stop on error': MDL-10689)
         $gradeerrors = 0;
+        $fractionerrors = 0;
         $goodquestions = array();
+
         foreach ($questions as $question) {
             if (!empty($question->fraction) and (is_array($question->fraction))) {
+                $totalfraction = 0;
+                $maxfraction = -1;
+
                 $fractions = $question->fraction;
                 $invalidfractions = array();
                 foreach ($fractions as $key => $fraction) {
@@ -383,23 +388,49 @@ class qformat_default {
                         $invalidfractions[] = $fraction;
                     } else {
                         $fractions[$key] = $newfraction;
+
+                        if ($newfraction > 0) {
+                            $totalfraction += $newfraction;
+                        }
+
+                        if ($newfraction > $maxfraction) {
+                            $maxfraction = $newfraction;
+                        }
                     }
                 }
+
+                // Handle invalid grade error.
                 if ($invalidfractions) {
                     echo $OUTPUT->notification(get_string('invalidgrade', 'question',
                             implode(', ', $invalidfractions)));
                     ++$gradeerrors;
                     continue;
-                } else {
-                    $question->fraction = $fractions;
                 }
+
+                // Handle invalid grade fraction sum error.
+                if (isset($question->single) && !empty($question->single)) {
+                    if ($maxfraction != 1) {
+                        echo $OUTPUT->notification(get_string('errfractionsnomax', 'qtype_multichoice', $maxfraction * 100));
+                        $fractionerrors++;
+                        continue;
+                    }
+                } else {
+                    $totalfraction = round($totalfraction, 2);
+                    if ($totalfraction != 1) {
+                        echo $OUTPUT->notification(get_string('errfractionsaddwrong', 'qtype_multichoice', $totalfraction * 100));
+                        $fractionerrors++;
+                        continue;
+                    }
+                }
+
+                $question->fraction = $fractions;
             }
             $goodquestions[] = $question;
         }
         $questions = $goodquestions;
 
         // check for errors before we continue
-        if ($this->stoponerror && $gradeerrors > 0) {
+        if ($this->stoponerror && ($gradeerrors > 0 || $fractionerrors > 0)) {
             return false;
         }
 
