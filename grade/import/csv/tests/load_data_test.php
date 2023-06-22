@@ -380,11 +380,13 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
 
         // We're not using scales so no to this option.
         $verbosescales = 0;
+        $linenumber = 2;
         // Map and key are to retrieve the grade_item that we are updating.
         $map = array(1);
         $key = 0;
         // We return the new grade array for saving.
-        $newgrades = $testobject->test_update_grade_item($this->courseid, $map, $key, $verbosescales, $testarray[0][6]);
+        $grade = $testarray[0][6];
+        $newgrades = $testobject->test_update_grade_item($this->courseid, $map, $key, $verbosescales, $grade, $linenumber);
 
         $expectedresult = array();
         $expectedresult[0] = new \stdClass();
@@ -394,10 +396,11 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
         $this->assertEquals($newgrades, $expectedresult);
 
         // Try sending a bad grade value (A letter instead of a float / int).
-        $newgrades = $testobject->test_update_grade_item($this->courseid, $map, $key, $verbosescales, 'A');
+        $newgrades = $testobject->test_update_grade_item($this->courseid, $map, $key, $verbosescales, 'A', $linenumber);
         // The $newgrades variable should be null.
         $this->assertNull($newgrades);
-        $expectederrormessage = get_string('badgrade', 'grades');
+        $a = array('badgrade' => 'A', 'linenumber' => $linenumber);
+        $expectederrormessage = get_string('badgrade', 'gradeimport_csv', $a);
         // Check that the error message is what we expect.
         $gradebookerrors = $testobject->get_gradebookerrors();
         $this->assertEquals($expectederrormessage, $gradebookerrors[0]);
@@ -419,22 +422,23 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
 
         // We're not using scales so no to this option.
         $verbosescales = 0;
+        $linenumber = 2;
         // Map and key are to retrieve the grade_item that we are updating.
         $map = array(1);
         $key = 0;
 
         // Test new user mapping. This should return the user id if there were no problems.
         $userid = $testobject->test_map_user_data_with_value('useremail', $testarray[0][5], $this->columns, $map, $key,
-                $this->courseid, $map[$key], $verbosescales);
+                $this->courseid, $map[$key], $verbosescales, $linenumber);
         $this->assertEquals($userid, $userdetail->id);
 
         $newgrades = $testobject->test_map_user_data_with_value('new', $testarray[0][6], $this->columns, $map, $key,
-                $this->courseid, $map[$key], $verbosescales);
+                $this->courseid, $map[$key], $verbosescales, $linenumber);
         // Check that the final grade is the same as the one inserted.
         $this->assertEquals($testarray[0][6], $newgrades[0]->finalgrade);
 
         $newgrades = $testobject->test_map_user_data_with_value('new', $testarray[0][8], $this->columns, $map, $key,
-                $this->courseid, $map[$key], $verbosescales);
+                $this->courseid, $map[$key], $verbosescales, $linenumber);
         // Check that the final grade is the same as the one inserted.
         // The testobject should now contain 2 new grade items.
         $this->assertEquals(2, count($newgrades));
@@ -442,7 +446,7 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
         $this->assertNull($newgrades[1]->finalgrade);
 
         $feedback = $testobject->test_map_user_data_with_value('feedback', $testarray[0][7], $this->columns, $map, $key,
-                $this->courseid, $map[$key], $verbosescales);
+                $this->courseid, $map[$key], $verbosescales, $linenumber);
         // Expected result.
         $resultarray = array();
         $resultarray[0] = new \stdClass();
@@ -452,7 +456,7 @@ Bobby,Bunce,,"Moodle HQ","Rock on!",student5@example.com,75.00,,75.00,{exportdat
 
         // Default behaviour (update a grade item).
         $newgrades = $testobject->test_map_user_data_with_value('default', $testarray[0][6], $this->columns, $map, $key,
-                $this->courseid, $map[$key], $verbosescales);
+                $this->courseid, $map[$key], $verbosescales, $linenumber);
         $this->assertEquals($testarray[0][6], $newgrades[0]->finalgrade);
     }
 
