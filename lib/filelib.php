@@ -3655,6 +3655,10 @@ class curl {
                 $options[$n] = $v;
             }
             $handles[$i] = curl_init($requests[$i]['url']);
+
+            // Set the URL as a curl option.
+            $this->setopt(array('CURLOPT_URL' => $requests[$i]['url']));
+
             $this->apply_opt($handles[$i], $options);
             curl_multi_add_handle($main, $handles[$i]);
         }
