@@ -236,6 +236,36 @@ class qformat_xml_import_export_test extends advanced_testcase {
     }
 
     /**
+     * Check exception when importing questions with invalid fraction sum.
+     *
+     * @covers \qformat_default::importprocess
+     */
+    public function test_import_invalid_fraction_sum() {
+        global $OUTPUT;
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course();
+        $this->setAdminUser();
+        $qformat = $this->create_qformat('error_invalid_fraction_sum.xml', $course);
+
+        ob_start();
+        $imported = $qformat->importprocess();
+        $output = ob_get_clean();
+
+        // Expected message for question 1.
+        $expectedoutput = $OUTPUT->notification(get_string('errfractionsaddwrong', 'qtype_multichoice', 200));
+
+        // Expected message for question 2.
+        $expectedoutput .= $OUTPUT->notification(get_string('errfractionsaddwrong', 'qtype_multichoice', 60));
+
+        // Expected message for question 4.
+        $expectedoutput .= $OUTPUT->notification(get_string('errfractionsnomax', 'qtype_multichoice', 50));
+
+        $this->assertFalse($imported);
+        $this->assertEquals($expectedoutput, $output);
+    }
+
+    /**
      * Simple check for exporting a category.
      */
     public function test_export_category() {
