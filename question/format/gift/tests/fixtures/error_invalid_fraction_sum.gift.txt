@@ -1,0 +1,20 @@
+// question: 1  name: gift import: invalid percentage answer weights (too much)
+::gift import: invalid percentage answer weights (too much)::[html]<p>multichoice</p>{
+	~%100%<p>choice 1</p>
+	~%100%<p>choice 2</p>
+	~%-50%<p>choice 3</p>
+}
+
+// question: 2  name: gift import: invalid percentage answer weights (not enough)
+::gift import: invalid percentage answer weights (not enough)::[html]<p>multichoice</p>{
+	~%30%<p>choice 1</p>
+	~%30%<p>choice 2</p>
+	~%-50%<p>choice 3</p>
+}
+
+// question: 3  name: gift import: valid percentage answer weights
+::gift import: valid percentage answer weights::[html]<p>multichoice</p>{
+	~%-50%<p>choice 1</p>
+	~%100%<p>choice 2</p>
+	~%-50%<p>choice 3</p>
+}
