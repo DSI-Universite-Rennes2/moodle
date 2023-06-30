@@ -41,6 +41,10 @@ if (!empty($CFG->gradepublishing)) {
     $CFG->gradepublishing = has_capability('gradeimport/xml:publish', $context);
 }
 
+$actionbar = new \core_grades\output\import_action_bar($context, null, 'xml');
+$gradepagehead = print_grade_page_head($COURSE->id, 'import', 'xml', get_string('importxml', 'grades'),
+    true, false, true, 'importxml', 'gradeimport_xml', null, $actionbar);
+
 $mform = new grade_import_form(null, array('acceptedtypes' => array('.xml')));
 
 if ($data = $mform->get_data()) {
@@ -51,8 +55,7 @@ if ($data = $mform->get_data()) {
     raise_memory_limit(MEMORY_EXTRA);
 
     if ($text = $mform->get_file_content('userfile')) {
-        print_grade_page_head($COURSE->id, 'import', 'xml',
-                              get_string('importxml', 'grades'), false, false, true, 'importxml', 'gradeimport_xml');
+        echo $gradepagehead;
 
         $error = '';
         $importcode = import_xml_grades($text, $course, $error);
@@ -75,9 +78,7 @@ if ($data = $mform->get_data()) {
             $data->key = create_user_key('grade/import', $USER->id, $course->id, $data->iprestriction, $data->validuntil);
         }
 
-        print_grade_page_head($COURSE->id, 'import', 'xml',
-                              get_string('importxml', 'grades'), false, false, true, 'importxml', 'gradeimport_xml');
-
+        echo $gradepagehead;
         echo '<div class="gradeexportlink">';
         $link = $CFG->wwwroot.'/grade/import/xml/fetch.php?id='.$id.'&amp;feedback='.(int)($data->feedback).'&amp;url='.urlencode($data->url).'&amp;key='.$data->key;
         echo get_string('import', 'grades').': <a href="'.$link.'">'.$link.'</a>';
@@ -87,9 +88,7 @@ if ($data = $mform->get_data()) {
     }
 }
 
-$actionbar = new \core_grades\output\import_action_bar($context, null, 'xml');
-print_grade_page_head($COURSE->id, 'import', 'xml', get_string('importxml', 'grades'),
-    false, false, true, 'importxml', 'gradeimport_xml', null, $actionbar);
+echo $gradepagehead;
 
 $mform->display();
 
