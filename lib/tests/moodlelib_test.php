@@ -5375,7 +5375,7 @@ EOF;
         return [
             'Proxybypass contains the same IP as the beginning of the URL' => [
                 'http://192.168.5.5-fake-app-7f000101.nip.io',
-                '192.168.5.5, 127.0.0.1',
+                '192.168.5.5,127.0.0.1',
                 false
             ],
             'Proxybypass contains the last part of the URL' => [
@@ -5393,9 +5393,24 @@ EOF;
                 'store.myweb.com',
                 false
             ],
+            'Proxybypass with a wildcard contains part of the url' => [
+                'http://myweb.com',
+                '*.myweb.com',
+                false
+            ],
             'Different IPs used in proxybypass' => [
                 'http://192.168.5.5',
                 '192.168.5.3',
+                false
+            ],
+            'Different partial IPs used in proxybypass' => [
+                'http://192.168.5.5',
+                '192.16',
+                false
+            ],
+            'Different partial IPs used in proxybypass with ending dot' => [
+                'http://192.168.5.5',
+                '192.16.',
                 false
             ],
             'Proxybypass and URL matchs' => [
@@ -5403,9 +5418,29 @@ EOF;
                 'store.mydomain.com',
                 true
             ],
+            'Proxybypass with a wildcard value covers any subdomain' => [
+                'http://store.mydomain.com',
+                '*.mydomain.com',
+                true
+            ],
+            'Proxybypass with a wildcard value covers any higher level subdomain' => [
+                'http://another.store.mydomain.com',
+                '*.mydomain.com',
+                true
+            ],
+            'Proxybypass with multiple domains' => [
+                'http://store.mydomain.com',
+                '127.0.0.1,*.mydomain.com',
+                true
+            ],
             'IP used in proxybypass' => [
                 'http://192.168.5.5',
                 '192.168.5.5',
+                true
+            ],
+            'Partial IP used in proxybypass' => [
+                'http://192.168.5.5',
+                '192.168.',
                 true
             ],
         ];
@@ -5428,5 +5463,75 @@ EOF;
         $CFG->proxybypass = $proxybypass;
 
         $this->assertEquals($expected, is_proxybypass($url));
+    }
+
+    /**
+     * Provider for normalize_proxybypass
+     *
+     * @return array of test cases.
+     */
+    public static function normalize_proxybypass_provider(): array {
+        return [
+            'Strip all white spaces' => [
+                '   192.168.5.5, 127.0.0.1,    www.moodle.org   ',
+                '192.168.5.5,127.0.0.1,www.moodle.org',
+            ],
+            'Trim input' => [
+                '    192.168.5.5,127.0.0.1,www.moodle.org   ',
+                '192.168.5.5,127.0.0.1,www.moodle.org',
+            ],
+            'Preserve valid full and partial IP' => [
+                '127.0.0.1,192.168.0.0/16,fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80,fe80::ffff',
+                '127.0.0.1,192.168.0.0/16,fe80:fe80:fe80:fe80:fe80:fe80:fe80:fe80,fe80::ffff',
+            ],
+            'Convert previous allowed format to new allowed format' => [
+                '127.,169.8.,192.168.10.,.moodle.org',
+                '127.0.0.0/8,169.8.0.0/16,192.168.10.0/24,*.moodle.org',
+            ],
+            'Preserve valid domain and pattern domain' => [
+                'localhost,www.moodle.org,.moodle.com,*.moodledev.io',
+                'localhost,www.moodle.org,*.moodle.com,*.moodledev.io',
+            ],
+            'Remove all invalid IP and domains' => [
+                '327.0.0.1,192.168,fe80::ddddd,fe80:,-example.com',
+                '',
+            ],
+            'Remove duplicate values' => [
+                '.moodle.org,*.moodle.org,*.moodle.org,.moodle.org',
+                '*.moodle.org',
+            ],
+        ];
+    }
+
+    /**
+     * Check if $CFG->proxybypass is correctly normalized.
+     *
+     * @covers ::normalize_proxybypass
+     *
+     * @dataProvider normalize_proxybypass_provider
+     *
+     * @param string $input    Raw input value.
+     * @param string $expected Expected value after normalization.
+     */
+    public function test_normalize_proxybypass(string $input, string $expected): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+
+        // Save and reset $CFG->config_php_settings value.
+        $configphpsettings = $CFG->config_php_settings;
+        $CFG->config_php_settings = [];
+
+        // Save a new value for proxybypass variable.
+        set_config('proxybypass', $input);
+
+        // Normalize proxybypass variable value.
+        normalize_proxybypass();
+
+        // Test result.
+        $this->assertEquals($expected, get_config('core', 'proxybypass'));
+
+        // Restore $CFG->config_php_settings value.
+        $CFG->config_php_settings = $configphpsettings;
     }
 }

@@ -4584,5 +4584,13 @@ privatefiles,moodle|/user/files.php';
         upgrade_main_savepoint(true, 2022041908.02);
     }
 
+    if ($oldversion < 2022041911.06) {
+        // Normalize proxybypass value.
+        normalize_proxybypass();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022041911.06);
+    }
+
     return true;
 }
