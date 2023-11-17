@@ -10044,6 +10044,62 @@ function is_proxybypass( $url ) {
 }
 
 /**
+ * Callback function to normalize proxybypass value from admin form.
+ *
+ * @return void
+ */
+function normalize_proxybypass() {
+    // Load $CFG->proxybypass variable.
+    $value = get_config('core', 'proxybypass');
+
+    // Remove all white spaces.
+    $value = str_replace(' ', '', $value);
+
+    $addresses = [];
+    foreach (explode(',', $value) as $address) {
+        // Trim value.
+        $address = trim($address);
+
+        // Replace previous allowed "192.168." format to CIDR format (192.168.0.0/16).
+        if (substr($address, -1) === '.') {
+            $count = substr_count($address, '.');
+
+            // Remove final dot.
+            $address = substr($address, 0, -1);
+            // Fill address with missing ".0".
+            $address .= str_repeat('.0', 4 - $count);
+            // Add subnet mask.
+            $address .= '/' . ($count * 8);
+        }
+
+        $isipaddress = \core\ip_utils::is_ip_address($address);
+        if ($isipaddress || \core\ip_utils::is_ipv4_range($address) || \core\ip_utils::is_ipv6_range($address)) {
+            // Keep full or partial ip address.
+            $addresses[] = $address;
+            continue;
+        }
+
+        // Replace previous allowed ".domain.tld" format to "*.domain.tld" format.
+        if (substr($address, 0, 1) === '.') {
+            $address = '*'.$address;
+        }
+
+        if (\core\ip_utils::is_domain_name($address) || \core\ip_utils::is_domain_matching_pattern($address)) {
+            // Keep valid domain or pattern domain.
+            $addresses[] = $address;
+            continue;
+        }
+
+        // Skip invalid value.
+    }
+
+    $value = implode(',', array_unique($addresses));
+
+    // Set and save $CFG->proxybypass value.
+    set_config('proxybypass', $value);
+}
+
+/**
  * Check if the passed navigation is of the new style
  *
  * @param mixed $navigation
