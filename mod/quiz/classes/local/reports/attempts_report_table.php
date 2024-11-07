@@ -598,6 +598,9 @@ abstract class attempts_report_table extends \table_sql {
             $where .= " AND (quiza.state $statesql OR quiza.state IS NULL)";
         }
 
+        // Show only active users.
+        $where .= " AND u.deleted = 0";
+
         return [$fields, $from, $where, $params];
     }
 

@@ -111,3 +111,19 @@ Feature: Basic use of the Grades report
     And I navigate to "Results" in current page administration
     Then I should see "Apple" in the "S1 Student1" "table_row"
     And I should see "Banana" in the "S2 Student2" "table_row"
+
+  @javascript
+  Scenario: Deleted users should be hidden in quiz report
+    Given I log in as "admin"
+    And I am on the "Quiz 1" "quiz activity" page logged in as admin
+    And I navigate to "Results" in current page administration
+    And I should see "S1 Student1" in the "attempts" "table"
+    Then I navigate to "Users > Accounts > Browse list of users" in site administration
+    And I press "Delete" action in the "S1 Student1" report row
+    And I click on "Delete" "button" in the "Delete user" "dialogue"
+    And I should see "Deleted user S1 Student1"
+    Then I am on the "Quiz 1" "quiz activity" page logged in as admin
+    And I navigate to "Results" in current page administration
+    And I set the field "Attempts from" to "all users who have attempted the quiz"
+    And I press "Show report"
+    And I should not see "S1 Student1" in the "attempts" "table"
