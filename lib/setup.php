@@ -344,6 +344,11 @@ if (defined('WEB_CRON_EMULATED_CLI')) {
         echo('Command line scripts must define CLI_SCRIPT before requiring config.php'."\n");
         exit(1);
     }
+
+    if (function_exists('posix_getuid') && posix_getuid() === 0) {
+        echo "Command line scripts can not be executed as root user.\n";
+        exit(1);
+    }
 }
 
 // All web service requests have WS_SERVER == true.
