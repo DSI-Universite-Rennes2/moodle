@@ -89,12 +89,6 @@ class quiz_overview_report extends attempts_report {
                     WHERE $studentsjoins->wheres";
             $hasstudents = $DB->record_exists_sql($sql, $studentsjoins->params);
         }
-        if ($options->attempts == self::ALL_WITH) {
-            // This option is only available to users who can access all groups in
-            // groups mode, so setting allowed to empty (which means all quiz attempts
-            // are accessible, is not a security problem.
-            $allowedjoins = new \core\dml\sql_join();
-        }
 
         $this->process_actions($quiz, $cm, $currentgroup, $groupstudentsjoins, $allowedjoins, $options->get_url());
 

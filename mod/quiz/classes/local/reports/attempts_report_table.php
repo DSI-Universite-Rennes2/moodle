@@ -569,7 +569,8 @@ abstract class attempts_report_table extends \table_sql {
         switch ($this->options->attempts) {
             case attempts_report::ALL_WITH:
                 // Show all attempts, including students who are no longer in the course.
-                $where = 'quiza.id IS NOT NULL AND quiza.preview = 0';
+                $where = "quiza.id IS NOT NULL AND quiza.preview = 0 AND " . $allowedstudentsjoins->wheres;
+                $params = array_merge($params, $allowedstudentsjoins->params);
                 break;
             case attempts_report::ENROLLED_WITH:
                 // Show only students with attempts.
@@ -597,9 +598,6 @@ abstract class attempts_report_table extends \table_sql {
             $params += $stateparams;
             $where .= " AND (quiza.state $statesql OR quiza.state IS NULL)";
         }
-
-        // Show only active users.
-        $where .= " AND u.deleted = 0";
 
         return [$fields, $from, $where, $params];
     }
