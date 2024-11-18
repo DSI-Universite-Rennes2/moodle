@@ -1208,5 +1208,13 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2024042203.08);
     }
 
+    if ($oldversion < 2024042204.07) {
+        // Normalize proxybypass value.
+        normalize_proxybypass();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024042204.07);
+    }
+
     return true;
 }
