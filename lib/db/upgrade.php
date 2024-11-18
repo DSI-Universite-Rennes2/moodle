@@ -1447,5 +1447,13 @@ function xmldb_main_upgrade($oldversion) {
     // Automatically generated Moodle v4.5.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2024100700.07) {
+        // Normalize proxybypass value.
+        normalize_proxybypass();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024100700.07);
+    }
+
     return true;
 }
