@@ -108,6 +108,9 @@ class MoodleExcelWorkbook {
     public function close() {
         global $CFG;
 
+        // If this file was requested from a form, then mark download as complete.
+        \core_form\util::form_download_complete();
+
         foreach ($this->objspreadsheet->getAllSheets() as $sheet) {
             $sheet->setSelectedCells('A1');
         }
