@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use PHPUnit\Framework\Attributes\DataProvider;
 
 defined('MOODLE_INTERNAL') || die();
 global $CFG;
@@ -31,12 +32,32 @@ require_once($CFG->dirroot . '/question/engine/tests/helpers.php');
 require_once($CFG->dirroot . '/question/editlib.php');
 
 /**
+ * Subclass to make it easier to test qformat_xml.
+ */
+class testable_qformat_xml extends qformat_xml {
+    /**
+     * Wrapper to catch and return standard output of qformat_xml::error().
+     *
+     * @param string $message Error message.
+     * @param string $text Optional custom text.
+     * @param string $questionname Optional question name.
+     *
+     * @return string Error message that should be displayed on screen by qformat_xml::error().
+     */
+    public function get_error_string(string $message, string $text = '', string $questionname = ''): string {
+        ob_start();
+        $this->error($message, $text, $questionname);
+        return ob_get_clean();
+    }
+}
+
+/**
  * Unit tests for the XML question format import and export.
  *
  * @copyright  2014 Nikita Nikitsky, Volgograd State Technical University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \qformat_xml
  */
+#[CoversClass(qformat_xml::class)]
 final class qformat_xml_import_export_test extends advanced_testcase {
     /** @var stdClass mod_qbank instance */
     private stdClass $qbank;
@@ -66,6 +87,96 @@ final class qformat_xml_import_export_test extends advanced_testcase {
         $this->qbank = $qbank;
 
         return $qformat;
+    }
+
+    /**
+     * Data provider for the importprocess test.
+     */
+    public static function get_import_test_cases(): array {
+        global $CFG, $OUTPUT;
+
+        $dataset = [];
+
+        // Valid that an error occurs when the export file is not readable.
+        $dataset['Read data error'] = [
+            'displayprogress' => false,
+            'expectedoutput' => $OUTPUT->notification(get_string('cannotread', 'question')),
+            'expectedreturn' => false,
+            'filename' => 'i.do.not.exist',
+            'stoponerror' => true,
+        ];
+
+        // Valid that an error occurs when the export file has no questions.
+        $dataset['Read question error'] = [
+            'displayprogress' => false,
+            'expectedoutput' => $OUTPUT->notification(get_string('noquestionsinfile', 'question')),
+            'expectedreturn' => false,
+            'filename' => 'export_without_question.xml',
+            'stoponerror' => true,
+        ];
+
+        // Valid that import continues and returns true, even with errors.
+        $xmlformat = new testable_qformat_xml();
+        $expectedmessage = get_string('xmltypeunsupported', 'qformat_xml', $questiontype = 'unknownquestiontype');
+        $expectedoutput = $xmlformat->get_error_string($expectedmessage);
+        $dataset['Import with one invalid question without stop on error'] = [
+            'displayprogress' => false,
+            'expectedoutput' => $expectedoutput,
+            'expectedreturn' => true,
+            'filename' => 'partial_invalid_export.xml',
+            'stoponerror' => false,
+        ];
+
+        // Valid that import with invalid question stops on error.
+        $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
+        $dataset['Import with one invalid question and stop on error'] = [
+            'displayprogress' => false,
+            'expectedoutput' => $expectedoutput,
+            'expectedreturn' => false,
+            'filename' => 'partial_invalid_export.xml',
+            'stoponerror' => true,
+        ];
+
+        // Valid that import with invalid grades stops on error.
+        $questionname = 'Question with invalid grades : x &gt; 1 &amp; x &lt; 2';
+        $expectedmessage = get_string('invalidgradequestion', 'question', ['grades' => '0.33', 'question' => $questionname]);
+        $expectedoutput = $OUTPUT->notification($expectedmessage);
+        $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
+        $dataset['Import with invalid grades'] = [
+            'displayprogress' => false,
+            'expectedoutput' => $expectedoutput,
+            'expectedreturn' => false,
+            'filename' => 'error_invalid_grades.xml',
+            'stoponerror' => true,
+        ];
+
+        // Valid succesful import.
+        $questions = [
+            "Moodle [Moodle logo] is an acronym for Modular Object-Oriented Dynamic Learning Education.\n",
+            "Moodle [Moodle logo] is an acronym for Modular Object-Oriented Dynamic Learning Environment.\n",
+        ];
+        $expectedoutput = $OUTPUT->notification(get_string('parsingquestions', 'question'), 'notifysuccess');
+        $expectedoutput .= $OUTPUT->notification(get_string('importingquestions', 'question', count($questions)), 'notifysuccess');
+        $expectedoutput .= '<hr /><p><b>1</b>. ' . $questions[0] . '</p>';
+        $expectedoutput .= '<hr /><p><b>2</b>. ' . $questions[1] . '</p>';
+        $dataset['Successful import with display progress'] = [
+            'displayprogress' => true,
+            'expectedoutput' => $expectedoutput,
+            'expectedreturn' => true,
+            'filename' => 'truefalse.xml',
+            'stoponerror' => true,
+        ];
+
+        // Valid that succesful import shows nothing when displayprogress is disabled.
+        $dataset['Successful import'] = [
+            'displayprogress' => false,
+            'expectedoutput' => '',
+            'expectedreturn' => true,
+            'filename' => 'truefalse.xml',
+            'stoponerror' => true,
+        ];
+
+        return $dataset;
     }
 
     /**
@@ -150,6 +261,37 @@ final class qformat_xml_import_export_test extends advanced_testcase {
     }
 
     /**
+     * Test fraction validation.
+     */
+    #[TestDox('@covers ::importprocess')]
+    #[DataProvider('get_import_test_cases')]
+    public function test_importprocess(
+        bool $displayprogress,
+        ?string $expectedoutput,
+        bool $expectedreturn,
+        string $filename,
+        bool $stoponerror
+    ): void {
+
+        $this->resetAfterTest();
+
+        // Setup environment.
+        $this->setAdminUser();
+
+        $qformat = $this->create_qformat($filename);
+        $qformat->set_display_progress($displayprogress);
+        $qformat->setStoponerror($stoponerror);
+
+        // Execute test.
+        ob_start();
+        $return = $qformat->importprocess();
+        $output = ob_get_clean();
+
+        $this->assertEquals($expectedoutput, $output);
+        $this->assertEquals($expectedreturn, $return);
+    }
+
+    /**
      * Simple check for importing a category with a description.
      */
     public function test_import_category(): void {
@@ -168,8 +310,8 @@ final class qformat_xml_import_export_test extends advanced_testcase {
      * Check importing categories that were in a now deprecated context.
      *
      * @return void
-     * @covers \qformat_default::importprocess()
      */
+    #[TestDox('@covers ::importprocess')]
     public function test_deprecated_category_import(): void {
         $this->resetAfterTest();
         self::setAdminUser();
@@ -259,9 +401,8 @@ final class qformat_xml_import_export_test extends advanced_testcase {
 
     /**
      * Check exception when importing questions with invalid grades.
-     *
-     * @covers \qformat_default::importprocess
      */
+    #[TestDox('@covers ::importprocess')]
     public function test_import_invalid_grades(): void {
         global $OUTPUT;
 
@@ -275,6 +416,38 @@ final class qformat_xml_import_export_test extends advanced_testcase {
 
         $a = ['grades' => '0.33', 'question' => 'Question with invalid grades : x > 1 & x < 2'];
         $expectedoutput = $OUTPUT->notification(get_string('invalidgradequestion', 'question', $a));
+        $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
+
+        $this->assertFalse($imported);
+        $this->assertEquals($expectedoutput, $output);
+    }
+
+    /**
+     * Check exception when importing questions with invalid fraction sum.
+     */
+    #[TestDox('@covers ::importprocess')]
+    public function test_import_invalid_fraction_sum(): void {
+        global $OUTPUT;
+
+        $this->resetAfterTest(true);
+        $course = $this->getDataGenerator()->create_course();
+        $this->setAdminUser();
+        $qformat = $this->create_qformat('error_invalid_fraction_sum.xml', $course);
+
+        ob_start();
+        $imported = $qformat->importprocess();
+        $output = ob_get_clean();
+
+        // Expected message for question 1.
+        $expectedoutput = $OUTPUT->notification(get_string('errfractionsaddwrong', 'qtype_multichoice', 200));
+
+        // Expected message for question 2.
+        $expectedoutput .= $OUTPUT->notification(get_string('errfractionsaddwrong', 'qtype_multichoice', 60));
+
+        // Expected message for question 3.
+        $expectedoutput .= $OUTPUT->notification(get_string('errfractionsnomax', 'qtype_multichoice', 50));
+
+        // Expected general error message.
         $expectedoutput .= $OUTPUT->notification(get_string('importparseerror', 'question'));
 
         $this->assertFalse($imported);

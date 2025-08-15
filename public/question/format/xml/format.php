@@ -1007,6 +1007,11 @@ class qformat_xml extends qformat_default {
             return false;
         }
         unset($lines); // No need to keep this in memory.
+
+        if (!isset($xml['quiz']['#']['question'])) {
+            return [];
+        }
+
         return $this->import_questions($xml['quiz']['#']['question']);
     }
 

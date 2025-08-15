@@ -1633,6 +1633,44 @@ class question_type {
                 return base64_decode($file->content);
         }
     }
+
+    /**
+     * Validate and normalize fraction.
+     *
+     * @throws Exception This can happen if fraction has an invalid value.
+     *
+     * @param stdClass $question Question object.
+     * @param array $gradeoptionsfull List of valid options.
+     * @param string $matchgrades 'error' or 'nearest'
+     *
+     * @return null|array Returns normalized fraction.
+     */
+    public static function validate_fraction(stdClass $question, array $gradeoptionsfull, string $matchgrades): ?array {
+        if (empty($question->fraction) || !is_array($question->fraction)) {
+            return null;
+        }
+
+        $fractions = $question->fraction;
+        $invalidfractions = [];
+        foreach ($fractions as $key => $fraction) {
+            $newfraction = match_grade_options($gradeoptionsfull, $fraction, $matchgrades);
+            if ($newfraction === false) {
+                $invalidfractions[] = $fraction;
+            } else {
+                $fractions[$key] = $newfraction;
+            }
+        }
+
+        if ($invalidfractions) {
+            throw new Exception(get_string(
+                'invalidgradequestion',
+                'question',
+                ['grades' => implode(', ', $invalidfractions), 'question' => $question->name]
+            ));
+        }
+
+        return $fractions;
+    }
 }
 
 

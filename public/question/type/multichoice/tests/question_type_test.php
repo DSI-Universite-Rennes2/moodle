@@ -16,8 +16,10 @@
 
 namespace qtype_multichoice;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use qtype_multichoice;
 use qtype_multichoice_edit_form;
+use question_bank;
 use question_possible_response;
 
 defined('MOODLE_INTERNAL') || die();
@@ -34,8 +36,8 @@ require_once($CFG->dirroot . '/question/type/multichoice/edit_multichoice_form.p
  * @package   qtype_multichoice
  * @copyright 2009 The Open University
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \qtype_multichoice
  */
+#[CoversClass(qtype_multichoice::class)]
 final class question_type_test extends \advanced_testcase {
     protected $qtype;
 
@@ -113,9 +115,7 @@ final class question_type_test extends \advanced_testcase {
         return array(array('two_of_four'), array('one_of_four'));
     }
 
-    /**
-     * @dataProvider get_question_saving_which
-     */
+    #[DataProvider('get_question_saving_which')]
     public function test_question_saving_two_of_four($which): void {
         $this->resetAfterTest(true);
         $this->setAdminUser();
@@ -243,5 +243,86 @@ final class question_type_test extends \advanced_testcase {
         $options = $question->options;
         $this->assertEquals($question->id, $options->questionid);
         $this->assertCount(0, $options->answers);
+    }
+
+    /**
+     * Test fraction validation.
+     */
+    #[TestDox('@covers ::validate_fraction')]
+    public function test_validate_fraction(): void {
+        $this->resetAfterTest(true);
+
+        // Setup environment.
+        $matchgrades = 'error';
+        $gradeoptionsfull = question_bank::fraction_options_full();
+
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $questiongenerator->create_question_category([]);
+
+        $question = $questiongenerator->create_question('multichoice', null, ['category' => $category->id, 'name' => '0']);
+        $qtype = question_bank::get_qtype($question->qtype);
+
+        // Test invalid fraction value.
+        try {
+            $question->fraction = [1, 0.333, 0.123];
+            $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades);
+
+            $this->fail('0.333 and 0.123 fractions should throw an exception.');
+        } catch (\Exception $exception) {
+            $expectedmessage = get_string(
+                'invalidgradequestion',
+                'question',
+                ['grades' => '0.333, 0.123', 'question' => $question->name]
+            );
+            $this->assertSame($expectedmessage, $exception->getMessage());
+        }
+
+        // Test invalid fraction sum for single question.
+        try {
+            $question->single = true;
+            $question->fraction = [0.75, 0.5];
+            $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades);
+
+            $this->fail('0.75 and 0.5 fractions should throw an exception.');
+        } catch (\Exception $exception) {
+            $expectedmessage = get_string('errfractionsnomax', 'qtype_multichoice', max($question->fraction) * 100);
+            $this->assertSame($expectedmessage, $exception->getMessage());
+        } finally {
+            unset($question->single);
+        }
+
+        // Test invalid fraction sum (too much).
+        try {
+            $question->fraction = [1, 1, -1];
+            $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades);
+
+            $this->fail('1, 1 and -1 fractions should throw an exception.');
+        } catch (\Exception $exception) {
+            // Sum of all positive numbers.
+            $sum = array_sum(array_filter($question->fraction, function ($a) {
+                return $a > 0;
+            }));
+            $expectedmessage = get_string('errfractionsaddwrong', 'qtype_multichoice', $sum * 100);
+            $this->assertSame($expectedmessage, $exception->getMessage());
+        }
+
+        // Test invalid fraction sum (not enough).
+        try {
+            $question->fraction = [0.25, 0.25, -1];
+            $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades);
+
+            $this->fail('1, -1, and -1 fractions should throw an exception.');
+        } catch (\Exception $exception) {
+            // Sum of all positive numbers.
+            $sum = array_sum(array_filter($question->fraction, function ($a) {
+                return $a > 0;
+            }));
+            $expectedmessage = get_string('errfractionsaddwrong', 'qtype_multichoice', $sum * 100);
+            $this->assertSame($expectedmessage, $exception->getMessage());
+        }
+
+        // Test normal case.
+        $question->fraction = [0.50, 0.25, 0.25];
+        $this->assertSame(['0.5', '0.25', '0.25'], $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades));
     }
 }

@@ -30,9 +30,8 @@ require_once($CFG->dirroot . '/question/type/questiontypebase.php');
  * @package    core_question
  * @copyright  2008 The Open University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- *
- * @covers \question_type
  */
+#[CoversClass(question_type::class)]
 final class question_type_test extends \advanced_testcase {
     public function test_save_question_name(): void {
         $this->resetAfterTest();
@@ -58,5 +57,51 @@ final class question_type_test extends \advanced_testcase {
         $actual = question_bank::load_question_data($saq->id);
 
         $this->assertSame('0', $actual->name);
+    }
+
+
+    /**
+     * Test fraction validation.
+     */
+    #[TestDox('@covers ::validate_fraction')]
+    public function test_validate_fraction(): void {
+        $this->resetAfterTest();
+
+        // Setup environment.
+        $matchgrades = 'error';
+        $gradeoptionsfull = question_bank::fraction_options_full();
+
+        $questiongenerator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $questiongenerator->create_question_category([]);
+
+        $question = $questiongenerator->create_question('shortanswer', null, ['category' => $category->id, 'name' => '0']);
+        $qtype = question_bank::get_qtype($question->qtype);
+
+        // Test empty fraction case.
+        $question->fraction = null;
+        $this->assertSame(null, $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades));
+
+        // Test non-array fraction value.
+        $question->fraction = 'invalid value';
+        $this->assertSame(null, $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades));
+
+        // Test invalid fraction value.
+        try {
+            $question->fraction = [1, 0.333, 0.123];
+            $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades);
+
+            $this->fail('0.333 and 0.123 fractions should throw an exception.');
+        } catch (\Exception $exception) {
+            $expectedmessage = get_string(
+                'invalidgradequestion',
+                'question',
+                ['grades' => '0.333, 0.123', 'question' => $question->name]
+            );
+            $this->assertSame($expectedmessage, $exception->getMessage());
+        }
+
+        // Test normal case.
+        $question->fraction = [1, 0.50, 0.3333333];
+        $this->assertSame(['1.0', '0.5', '0.3333333'], $qtype::validate_fraction($question, $gradeoptionsfull, $matchgrades));
     }
 }

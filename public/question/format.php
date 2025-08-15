@@ -379,28 +379,25 @@ class qformat_default {
         $gradeerrors = 0;
         $goodquestions = array();
         foreach ($questions as $question) {
-            if (!empty($question->fraction) and (is_array($question->fraction))) {
-                $fractions = $question->fraction;
-                $invalidfractions = array();
-                foreach ($fractions as $key => $fraction) {
-                    $newfraction = match_grade_options($gradeoptionsfull, $fraction,
-                            $this->matchgrades);
-                    if ($newfraction === false) {
-                        $invalidfractions[] = $fraction;
-                    } else {
-                        $fractions[$key] = $newfraction;
-                    }
-                }
-                if ($invalidfractions) {
-                    $a = ['grades' => implode(', ', $invalidfractions), 'question' => $question->name];
-                    echo $OUTPUT->notification(get_string('invalidgradequestion', 'question', $a));
-                    ++$gradeerrors;
-                    continue;
-                } else {
-                    $question->fraction = $fractions;
-                }
+            if ($question->qtype == 'category') {
+                // Always skip checking for 'category' question type.
+                $goodquestions[] = $question;
+                continue;
             }
-            $goodquestions[] = $question;
+
+            try {
+                $qtype = question_bank::get_qtype($question->qtype);
+
+                $result = $qtype::validate_fraction($question, $gradeoptionsfull, $this->matchgrades);
+                if ($result !== null) {
+                    $question->fraction = $result;
+                }
+
+                $goodquestions[] = $question;
+            } catch (Exception $exception) {
+                echo $OUTPUT->notification($exception->getMessage());
+                ++$gradeerrors;
+            }
         }
         $questions = $goodquestions;
 

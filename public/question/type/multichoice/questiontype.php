@@ -341,4 +341,66 @@ class qtype_multichoice extends question_type {
         $this->delete_files_in_combined_feedback($questionid, $contextid);
         $this->delete_files_in_hints($questionid, $contextid);
     }
+
+    /**
+     * Validate and normalize fraction.
+     *
+     * @throws Exception This can happen if fraction has an invalid value.
+     *
+     * @param stdClass $question Question object.
+     * @param array $gradeoptionsfull List of valid options.
+     * @param string $matchgrades 'error' or 'nearest'
+     *
+     * @return array Returns normalized fraction.
+     */
+    public static function validate_fraction(stdClass $question, array $gradeoptionsfull, string $matchgrades): array {
+        $totalfraction = 0;
+        $maxfraction = -1;
+
+        if (empty($question->fraction) || !is_array($question->fraction)) {
+            $question->fraction = [];
+        }
+
+        $fractions = $question->fraction;
+        $invalidfractions = [];
+        foreach ($fractions as $key => $fraction) {
+            $newfraction = match_grade_options($gradeoptionsfull, $fraction, $matchgrades);
+            if ($newfraction === false) {
+                $invalidfractions[] = $fraction;
+            } else {
+                $fractions[$key] = $newfraction;
+
+                if ($newfraction > 0) {
+                    $totalfraction += $newfraction;
+                }
+
+                if ($newfraction > $maxfraction) {
+                    $maxfraction = $newfraction;
+                }
+            }
+        }
+
+        // Handle invalid grade error.
+        if ($invalidfractions) {
+            throw new Exception(get_string(
+                'invalidgradequestion',
+                'question',
+                ['grades' => implode(', ', $invalidfractions), 'question' => $question->name]
+            ));
+        }
+
+        // Handle invalid grade fraction sum error.
+        if (isset($question->single) && !empty($question->single)) {
+            if ($maxfraction != 1) {
+                throw new Exception(get_string('errfractionsnomax', 'qtype_multichoice', $maxfraction * 100));
+            }
+        } else {
+            $totalfraction = round($totalfraction, 2);
+            if ($totalfraction != 1) {
+                throw new Exception(get_string('errfractionsaddwrong', 'qtype_multichoice', $totalfraction * 100));
+            }
+        }
+
+        return $fractions;
+    }
 }
