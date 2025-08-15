@@ -111,3 +111,31 @@ Feature: Basic use of the Grades report
     And I navigate to "Results" in current page administration
     Then I should see "Apple" in the "S1 Student1" "table_row"
     And I should see "Banana" in the "S2 Student2" "table_row"
+
+  @javascript
+  Scenario: Grades report shows a group column when group mode is enabled.
+    Given I log in as "teacher1"
+    And I am on the "Quiz 1" "quiz activity editing" page
+    And I set the following fields to these values:
+      | Group mode | Separate groups |
+    And I press "Save and display"
+    When I am on the "Quiz 1" "mod_quiz > grades report" page
+    And I set the field "Attempts from" to "enrolled users who have, or do not have, a quiz attempt"
+    And I press "Show report"
+    Then I should see "English" in the "S1 Student1" "table_row"
+    And I should see "English" in the "S2 Student2" "table_row"
+    And I should see "Group 2" in the "S3 Student3" "table_row"
+
+  @javascript
+  Scenario: Grades report does not show a group column when group mode is disabled.
+    Given I log in as "teacher1"
+    And I am on the "Quiz 1" "quiz activity editing" page
+    And I set the following fields to these values:
+      | Group mode | No groups |
+    And I press "Save and display"
+    When I am on the "Quiz 1" "mod_quiz > grades report" page
+    And I set the field "Attempts from" to "enrolled users who have, or do not have, a quiz attempt"
+    And I press "Show report"
+    Then I should not see "English" in the "S1 Student1" "table_row"
+    And I should not see "English" in the "S2 Student2" "table_row"
+    And I should not see "Group 2" in the "S3 Student3" "table_row"

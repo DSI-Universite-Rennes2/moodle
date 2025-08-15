@@ -72,3 +72,47 @@ Feature: Basic use of the Responses report
     And the "Which tries" "select" should be enabled
     When I set the field "Attempts from" to "enrolled users who do not have a quiz attempt"
     Then the "Which tries" "select" should be disabled
+
+  @javascript
+  Scenario: Responses report shows a group column when group mode is enabled.
+    Given the following "groups" exist:
+      | course | idnumber | name    |
+      | C1     | G1       | Group 1 |
+      | C1     | G2       | Group 2 |
+    And the following "group members" exist:
+      | group | user     |
+      | G1    | student1 |
+      | G1    | student2 |
+      | G2    | student2 |
+    And I log in as "teacher"
+    And I am on the "Quiz 1" "quiz activity editing" page
+    And I set the following fields to these values:
+      | Group mode | Separate groups |
+    And I press "Save and display"
+    When I am on the "Quiz 1" "mod_quiz > responses report" page
+    And I set the field "Attempts from" to "enrolled users who have, or do not have, a quiz attempt"
+    And I press "Show report"
+    Then I should see "Group 1" in the "Student One" "table_row"
+    And I should see "Group 1, Group 2" in the "Student Two" "table_row"
+
+  @javascript
+  Scenario: Responses report does not show a group column when group mode is disabled.
+    Given the following "groups" exist:
+      | course | idnumber | name    |
+      | C1     | G1       | Group 1 |
+      | C1     | G2       | Group 2 |
+    And the following "group members" exist:
+      | group | user     |
+      | G1    | student1 |
+      | G1    | student2 |
+      | G2    | student2 |
+    And I log in as "teacher"
+    And I am on the "Quiz 1" "quiz activity editing" page
+    And I set the following fields to these values:
+      | Group mode | No groups |
+    And I press "Save and display"
+    When I am on the "Quiz 1" "mod_quiz > responses report" page
+    And I set the field "Attempts from" to "enrolled users who have, or do not have, a quiz attempt"
+    And I press "Show report"
+    Then I should not see "Group 1" in the "Student One" "table_row"
+    And I should not see "Group 1, Group 2" in the "Student Two" "table_row"

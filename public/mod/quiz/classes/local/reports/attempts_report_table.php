@@ -82,6 +82,12 @@ abstract class attempts_report_table extends \table_sql {
      */
     protected $groupstudentsjoins;
 
+    /** @var int|false|null Group currently selected. Can be a value representing none group, all groups or a group ID. Integer or
+     * false value comes from {@see \mod_quiz\local\reports\report_base::get_current_group()}. NULL value is only used to display a
+     * debug message for inherited classes that do not provide $currentgroup in the constructor. This value should not be used.
+     */
+    protected $currentgroup;
+
     /** @var \core\dml\sql_join Contains joins, wheres, params to find the students in the course. */
     protected $studentsjoins;
 
@@ -112,15 +118,31 @@ abstract class attempts_report_table extends \table_sql {
      * @param \core\dml\sql_join $studentsjoins Contains joins, wheres, params
      * @param array $questions
      * @param moodle_url $reporturl
+     * @param int|false|null $currentgroup
      */
-    public function __construct($uniqueid, $quiz, $context, $qmsubselect,
-            attempts_report_options $options, \core\dml\sql_join $groupstudentsjoins, \core\dml\sql_join $studentsjoins,
-            $questions, $reporturl) {
+    public function __construct(
+        $uniqueid,
+        $quiz,
+        $context,
+        $qmsubselect,
+        attempts_report_options $options,
+        \core\dml\sql_join $groupstudentsjoins,
+        \core\dml\sql_join $studentsjoins,
+        $questions,
+        $reporturl,
+        int|false|null $currentgroup = null
+    ) {
         parent::__construct($uniqueid);
+
+        if ($currentgroup === null) {
+            $currentgroup = false;
+            debugging('Missing $currentgroup argument for ' . get_called_class() . '::' . __FUNCTION__ . '()', DEBUG_DEVELOPER);
+        }
         $this->quiz = $quiz;
         $this->context = $context;
         $this->qmsubselect = $qmsubselect;
         $this->groupstudentsjoins = $groupstudentsjoins;
+        $this->currentgroup = $currentgroup;
         $this->studentsjoins = $studentsjoins;
         $this->questions = $questions;
         $this->includecheckboxes = $options->checkboxcolumn;
@@ -566,6 +588,15 @@ abstract class attempts_report_table extends \table_sql {
             $params['finishedstate'] = quiz_attempt::FINISHED;
         }
 
+        // This part handles group display.
+        if ($this->show_group_column()) {
+            $fields .= ', gcn.groupnames';
+
+            [$groupconcatnamesql, $groupconcatnameparams] = groups_get_names_concat_sql($this->quiz->course);
+            $from .= "\nLEFT JOIN ({$groupconcatnamesql}) gcn ON gcn.userid = u.id";
+            $params = array_merge($params, $groupconcatnameparams);
+        }
+
         switch ($this->options->attempts) {
             case attempts_report::ALL_WITH:
                 // Show all attempts, including students who are no longer in the course.
@@ -842,5 +873,22 @@ abstract class attempts_report_table extends \table_sql {
         ]);
 
         return $OUTPUT->render($togglercheckbox);
+    }
+
+    /**
+     * Returns if group column should be displayed.
+     *
+     * @return bool
+     */
+    public function show_group_column(): bool {
+        if ($this->currentgroup === false) {
+            return false;
+        }
+
+        if ($this->currentgroup === report_base::NO_GROUPS_ALLOWED) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -25,6 +25,7 @@ use mod_quiz\local\reports\attempts_report;
 use quiz_overview_options;
 use quiz_overview_report;
 use quiz_overview_table;
+use quiz_statistics_report;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -34,6 +35,7 @@ require_once($CFG->dirroot . '/mod/quiz/report/reportlib.php');
 require_once($CFG->dirroot . '/mod/quiz/report/overview/report.php');
 require_once($CFG->dirroot . '/mod/quiz/report/overview/overview_form.php');
 require_once($CFG->dirroot . '/mod/quiz/report/overview/tests/helpers.php');
+require_once($CFG->dirroot . '/mod/quiz/report/statistics/report.php');
 require_once($CFG->dirroot . '/mod/quiz/tests/quiz_question_helper_test_trait.php');
 
 
@@ -201,8 +203,17 @@ final class report_test extends \advanced_testcase {
         // Now do a minimal set-up of the table class.
         $q->slot = 1;
         $q->maxmark = 10;
-        $table = new quiz_overview_table($quiz, $context, $qmsubselect, $reportoptions,
-                $empty, $studentsjoins, [1 => $q], null);
+        $table = new quiz_overview_table(
+            $quiz,
+            $context,
+            $qmsubselect,
+            $reportoptions,
+            $empty,
+            $studentsjoins,
+            [1 => $q],
+            null,
+            quiz_statistics_report::GROUPS_ALL_PARTICIPANTS
+        );
         $table->download = $isdownloading; // Cannot call the is_downloading API, because it gives errors.
         $table->define_columns(['fullname']);
         $table->sortable(true, 'uniqueid');

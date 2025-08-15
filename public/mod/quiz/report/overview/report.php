@@ -51,7 +51,6 @@ class quiz_overview_report extends attempts_report {
 
         if ($fromform = $this->form->get_data()) {
             $options->process_settings_from_form($fromform);
-
         } else {
             $options->process_settings_from_params();
         }
@@ -63,8 +62,17 @@ class quiz_overview_report extends attempts_report {
         // Prepare for downloading, if applicable.
         $courseshortname = format_string($course->shortname, true,
                 ['context' => context_course::instance($course->id)]);
-        $table = new quiz_overview_table($quiz, $this->context, $this->qmsubselect,
-                $options, $groupstudentsjoins, $studentsjoins, $questions, $options->get_url());
+        $table = new quiz_overview_table(
+            $quiz,
+            $this->context,
+            $this->qmsubselect,
+            $options,
+            $groupstudentsjoins,
+            $studentsjoins,
+            $questions,
+            $options->get_url(),
+            $currentgroup
+        );
         $filename = quiz_report_download_filename(get_string('overviewfilename', 'quiz_overview'),
                 $courseshortname, $quiz->name);
         $table->is_downloading($options->download, $filename,

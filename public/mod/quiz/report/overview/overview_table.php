@@ -38,12 +38,31 @@ class quiz_overview_table extends attempts_report_table {
      * @param \core\dml\sql_join $studentsjoins
      * @param array $questions
      * @param moodle_url $reporturl
+     * @param int|false|null $currentgroup
      */
-    public function __construct($quiz, $context, $qmsubselect,
-            quiz_overview_options $options, \core\dml\sql_join $groupstudentsjoins,
-            \core\dml\sql_join $studentsjoins, $questions, $reporturl) {
-        parent::__construct('mod-quiz-report-overview-report', $quiz , $context,
-                $qmsubselect, $options, $groupstudentsjoins, $studentsjoins, $questions, $reporturl);
+    public function __construct(
+        $quiz,
+        $context,
+        $qmsubselect,
+        quiz_overview_options $options,
+        \core\dml\sql_join $groupstudentsjoins,
+        \core\dml\sql_join $studentsjoins,
+        $questions,
+        $reporturl,
+        int|false|null $currentgroup = null
+    ) {
+        parent::__construct(
+            'mod-quiz-report-overview-report',
+            $quiz,
+            $context,
+            $qmsubselect,
+            $options,
+            $groupstudentsjoins,
+            $studentsjoins,
+            $questions,
+            $reporturl,
+            $currentgroup
+        );
     }
 
     public function build_table() {

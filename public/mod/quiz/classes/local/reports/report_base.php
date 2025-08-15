@@ -40,6 +40,9 @@ abstract class report_base {
     /** @var int special value used in place of groupid, to mean the use cannot access any groups. */
     const NO_GROUPS_ALLOWED = -2;
 
+    /** @var int special value used in place of groupid, to mean all groups. */
+    const GROUPS_ALL_PARTICIPANTS = 0;
+
     /**
      * Override this function to display the report.
      *
@@ -76,7 +79,7 @@ abstract class report_base {
      * @param stdClass $cm the course_module information.
      * @param stdClass $course the course settings.
      * @param context $context the quiz context.
-     * @return int the current group id, if applicable. 0 for all users,
+     * @return int|false the current group id, if applicable. 0 for all users,
      *      NO_GROUPS_ALLOWED if the user cannot see any group.
      */
     public function get_current_group($cm, $course, $context) {

@@ -219,6 +219,11 @@ abstract class attempts_report extends report_base {
             $columns[] = $field;
             $headers[] = \core_user\fields::get_display_name($field);
         }
+
+        if ($table->show_group_column()) {
+            $columns[] = 'groupnames';
+            $headers[] = get_string('group');
+        }
     }
 
     /**

@@ -76,8 +76,17 @@ class quiz_responses_report extends attempts_report {
         } else {
             $tableclassname = 'quiz_first_or_all_responses_table';
         }
-        $table = new $tableclassname($quiz, $this->context, $this->qmsubselect,
-                $options, $groupstudentsjoins, $studentsjoins, $questions, $options->get_url());
+        $table = new $tableclassname(
+            $quiz,
+            $this->context,
+            $this->qmsubselect,
+            $options,
+            $groupstudentsjoins,
+            $studentsjoins,
+            $questions,
+            $options->get_url(),
+            $currentgroup
+        );
         $filename = quiz_report_download_filename(get_string('responsesfilename', 'quiz_responses'),
                 $courseshortname, $quiz->name);
         $table->is_downloading($options->download, $filename,
