@@ -513,20 +513,20 @@ final class cache_test extends \advanced_testcase {
             $cache->get('exception', MUST_EXIST);
             $this->fail('Exception expected from cache::get using MUST_EXIST');
         } catch (\Exception $e) {
-            $this->assertTrue(true);
+            $this->assertInstanceOf(coding_exception::class, $e);
         }
         try {
             $cache->get_many(['exception1', 'exception2'], MUST_EXIST);
             $this->fail('Exception expected from cache::get_many using MUST_EXIST');
         } catch (\Exception $e) {
-            $this->assertTrue(true);
+            $this->assertInstanceOf(coding_exception::class, $e);
         }
         $cache->set('test', 'test');
         try {
             $cache->get_many(['test', 'exception'], MUST_EXIST);
             $this->fail('Exception expected from cache::get_many using MUST_EXIST');
         } catch (\Exception $e) {
-            $this->assertTrue(true);
+            $this->assertInstanceOf(coding_exception::class, $e);
         }
     }
 
