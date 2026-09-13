@@ -1350,7 +1350,7 @@ function badges_external_delete_mapping($sitebackpackid, $type, $internalid) {
         'internalid' => $internalid
     ];
 
-    $DB->delete_record('badge_external_identifier', $params);
+    $DB->delete_records('badge_external_identifier', $params);
 }
 
 /**
