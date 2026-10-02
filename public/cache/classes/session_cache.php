@@ -352,7 +352,7 @@ class session_cache extends cache {
             }
         }
         if ($hasmissingkeys && $strictness === MUST_EXIST) {
-            throw new coding_exception('Requested key did not exist in any cache stores and could not be loaded.');
+            throw new coding_exception('Not all the requested keys existed within the cache stores.');
         }
         if ($this->perfdebug) {
             $hits = 0;
