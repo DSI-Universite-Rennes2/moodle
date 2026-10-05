@@ -771,7 +771,7 @@ class cache implements loader_interface {
         // Final step is to check strictness.
         if ($strictness === MUST_EXIST) {
             foreach ($keys as $key) {
-                if (!array_key_exists($key, $fullresult)) {
+                if (!helper::result_found($fullresult[$key])) {
                     throw new coding_exception('Not all the requested keys existed within the cache stores.');
                 }
             }

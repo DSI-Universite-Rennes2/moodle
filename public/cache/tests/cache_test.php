@@ -512,21 +512,24 @@ final class cache_test extends \advanced_testcase {
         try {
             $cache->get('exception', MUST_EXIST);
             $this->fail('Exception expected from cache::get using MUST_EXIST');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString(
+                'Requested key did not exist in any cache stores and could not be loaded.',
+                $e->getMessage()
+            );
         }
         try {
             $cache->get_many(['exception1', 'exception2'], MUST_EXIST);
             $this->fail('Exception expected from cache::get_many using MUST_EXIST');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('Not all the requested keys existed within the cache stores.', $e->getMessage());
         }
         $cache->set('test', 'test');
         try {
             $cache->get_many(['test', 'exception'], MUST_EXIST);
             $this->fail('Exception expected from cache::get_many using MUST_EXIST');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
+        } catch (coding_exception $e) {
+            $this->assertStringContainsString('Not all the requested keys existed within the cache stores.', $e->getMessage());
         }
     }
 
