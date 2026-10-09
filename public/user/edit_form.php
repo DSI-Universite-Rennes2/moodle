@@ -229,7 +229,10 @@ class user_edit_form extends moodleform {
             $errors['email'] = get_string('toomanybounces');
         }
 
-        if (isset($usernew->email) and !empty($CFG->verifychangedemail) and !isset($errors['email']) and !has_capability('moodle/user:update', context_system::instance())) {
+        if (
+            isset($usernew->email) && $usernew->email !== $user->email && !empty($CFG->verifychangedemail) &&
+            !isset($errors['email']) && !has_capability('moodle/user:update', context_system::instance())
+        ) {
             $errorstr = email_is_not_allowed($usernew->email);
             if ($errorstr !== false) {
                 $errors['email'] = $errorstr;
